@@ -43,7 +43,6 @@ Thumbs.db
 nginx.service
 zhaojishi.service
 fix_nginx.sh
-deploy*.sh
 ln%3A
 nginx%3A
 try_files
