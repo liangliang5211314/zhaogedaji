@@ -1,0 +1,57 @@
+# 数据库文件
+*.db
+*.db-shm
+*.db-wal
+*.db.bak*
+data/
+
+# 敏感配置
+.env
+config.py
+
+# 服务器连接脚本（含密码）
+sync.py
+ssh_exec.py
+
+# 临时审计脚本
+_*.py
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*_venv/
+venv/
+.venv/
+
+# 日志
+logs/
+*.log
+gunicorn.pid
+
+# Claude / Agent 上下文
+.claude/
+.agents/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 服务器配置文件
+.htaccess
+.user.ini
+nginx.service
+zhaojishi.service
+fix_nginx.sh
+deploy*.sh
+ln%3A
+nginx%3A
+try_files
+sqlite3.OperationalError*
+
+# 微信验证文件
+MP_verify_*.txt
+
+# 其他
+skills-lock.json
+stitch_/
