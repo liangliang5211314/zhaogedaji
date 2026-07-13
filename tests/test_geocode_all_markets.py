@@ -113,6 +113,8 @@ def test_ocr_name_cleanup_is_conservative():
     assert reason.startswith("OCR脏数据:")
     _, reason = geo.analyze_market_name("一仙戈1土大集")
     assert reason.startswith("OCR脏数据:")
+    _, reason = geo.analyze_market_name("五、七、十-一大集")
+    assert reason.startswith("OCR脏数据:")
 
 
 def test_place_search_accepts_exact_county_and_market_token():

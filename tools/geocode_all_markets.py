@@ -88,6 +88,8 @@ def analyze_market_name(value):
         return raw, "OCR脏数据:名称清洗后为空"
     if raw.count("（") != raw.count("）") or raw.count("(") != raw.count(")"):
         return cleaned, "OCR脏数据:名称括号残缺"
+    if re.search(r"[、。，,.！!？?—\-]", cleaned):
+        return cleaned, "OCR脏数据:名称含未清理分隔符"
     if re.search(r"([\u4e00-\u9fff]{2,4})\1", cleaned):
         return cleaned, "OCR脏数据:名称含重复识别片段"
     if any(re.search(pattern, cleaned, re.IGNORECASE) for pattern in OCR_CONTAMINATION_PATTERNS):
