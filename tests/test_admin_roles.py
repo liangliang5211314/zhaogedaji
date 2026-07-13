@@ -53,6 +53,22 @@ def test_reviewer_can_audit_but_cannot_open_system_settings(role_client):
     assert allowed.status_code == 200
 
 
+def test_reviewer_cannot_promote_accounts(role_client):
+    client, reviewer_headers, _, reviewer_id = role_client
+    response = client.put(
+        f"/api/admin/users/{reviewer_id}",
+        json={"nickname": "审核员王宁", "role": "superadmin"},
+        headers=reviewer_headers,
+    )
+    assert response.status_code == 200
+    conn = app_module.get_db()
+    role = conn.execute(
+        "SELECT role FROM users WHERE id=?", (reviewer_id,)
+    ).fetchone()[0]
+    conn.close()
+    assert role == "admin"
+
+
 def test_todo_summary_uses_real_queue_counts(role_client):
     client, reviewer_headers, _, _ = role_client
     conn = app_module.get_db()
@@ -107,4 +123,68 @@ def test_data_review_records_operator_and_reason(role_client):
         "status": "resolved",
         "reviewed_by": reviewer_id,
         "review_reason": "人工核对村委会坐标",
+    }
+
+
+def test_seller_application_review_records_operator_and_promotes_user(role_client):
+    client, reviewer_headers, _, reviewer_id = role_client
+    conn = app_module.get_db()
+    conn.execute(
+        """INSERT INTO users(uid,phone,nickname,password,role,status)
+           VALUES('seller-user','13800000003','摊主张师傅','', 'user','normal')"""
+    )
+    user_id = conn.execute(
+        "SELECT id FROM users WHERE uid='seller-user'"
+    ).fetchone()[0]
+    cursor = conn.execute(
+        """INSERT INTO seller_applications(
+               user_id,applicant_name,phone,market_id,market_name,business_category
+           ) VALUES(?,?,?,?,?,?)""",
+        (user_id, "张师傅", "13800000003", "m-1", "李官大集", "土货特产"),
+    )
+    application_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+
+    pending = client.get(
+        "/api/admin/seller-applications?status=pending",
+        headers=reviewer_headers,
+    ).get_json()["data"]
+    assert pending["total"] == 1
+    assert pending["list"][0]["market_name"] == "李官大集"
+
+    missing_reason = client.patch(
+        f"/api/admin/seller-applications/{application_id}",
+        json={"status": "rejected"},
+        headers=reviewer_headers,
+    )
+    assert missing_reason.status_code == 400
+
+    approved = client.patch(
+        f"/api/admin/seller-applications/{application_id}",
+        json={"status": "approved", "reason": "证件与摊位信息核验通过"},
+        headers=reviewer_headers,
+    )
+    assert approved.status_code == 200
+
+    conn = app_module.get_db()
+    application = conn.execute(
+        "SELECT status,reviewed_by,review_reason FROM seller_applications WHERE id=?",
+        (application_id,),
+    ).fetchone()
+    role = conn.execute("SELECT role FROM users WHERE id=?", (user_id,)).fetchone()[0]
+    audit = conn.execute(
+        "SELECT user_id,action,target FROM operation_logs ORDER BY id DESC LIMIT 1"
+    ).fetchone()
+    conn.close()
+    assert dict(application) == {
+        "status": "approved",
+        "reviewed_by": reviewer_id,
+        "review_reason": "证件与摊位信息核验通过",
+    }
+    assert role == "seller"
+    assert dict(audit) == {
+        "user_id": reviewer_id,
+        "action": "review_seller_application",
+        "target": f"seller_application:{application_id}",
     }

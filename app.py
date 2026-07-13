@@ -203,6 +203,26 @@ def init_db():
             created_at  TEXT DEFAULT (datetime('now','localtime'))
         );
 
+        CREATE TABLE IF NOT EXISTS seller_applications (
+            id                INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id           INTEGER,
+            applicant_name    TEXT DEFAULT '',
+            phone             TEXT DEFAULT '',
+            market_id         TEXT DEFAULT '',
+            market_name       TEXT DEFAULT '',
+            business_category TEXT DEFAULT '',
+            evidence          TEXT DEFAULT '[]',
+            status            TEXT DEFAULT 'pending',
+            review_reason     TEXT DEFAULT '',
+            reviewed_by       INTEGER,
+            reviewed_at       TEXT DEFAULT '',
+            created_at        TEXT DEFAULT (datetime('now','localtime')),
+            updated_at        TEXT DEFAULT (datetime('now','localtime'))
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_seller_applications_status
+        ON seller_applications(status, created_at);
+
         CREATE TABLE IF NOT EXISTS operation_logs (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id     INTEGER,
@@ -4301,10 +4321,16 @@ def admin_update_user(uid):
         conn.close()
         return err('昵称不能为空')
 
-    new_role = data.get('role', user['role'])
-    # 非超级管理员不能修改超管角色
-    if user['role'] == 'superadmin' and request.current_user.get('role') != 'superadmin':
-        new_role = 'superadmin'
+    requested_role = data.get('role', user['role'])
+    if requested_role not in {'user', 'seller', 'admin', 'superadmin'}:
+        conn.close()
+        return err('角色不支持', 400)
+    # 只有超级管理员可以调整任何账号的角色；审核员只能编辑普通资料。
+    new_role = (
+        requested_role
+        if request.current_user.get('role') == 'superadmin'
+        else user['role']
+    )
 
     interests = data.get('interests', json.loads(user.get('interests') or '[]'))
     if isinstance(interests, list):
@@ -4334,6 +4360,79 @@ def admin_update_user(uid):
     log_action(request.current_user.get('id', 0), 'update_user', f'user:{uid}',
                f'修改用户 {nickname}')
     return ok({'id': uid, 'nickname': nickname})
+
+
+@app.route('/api/admin/seller-applications', methods=['GET'])
+@admin_required
+def admin_seller_applications():
+    status = request.args.get('status', 'pending')
+    if status not in {'pending', 'approved', 'rejected', 'all'}:
+        return err('status 不支持', 400)
+    conn = get_db()
+    sql = """
+        SELECT a.*, COALESCE(u.nickname,a.applicant_name,'申请人') AS nickname,
+               COALESCE(reviewer.nickname,'') AS reviewer_name
+        FROM seller_applications a
+        LEFT JOIN users u ON u.id=a.user_id
+        LEFT JOIN users reviewer ON reviewer.id=a.reviewed_by
+    """
+    params = []
+    if status != 'all':
+        sql += " WHERE a.status=?"
+        params.append(status)
+    sql += " ORDER BY CASE a.status WHEN 'pending' THEN 0 ELSE 1 END, a.created_at"
+    rows = conn.execute(sql, params).fetchall()
+    conn.close()
+    items = []
+    for row in rows:
+        item = dict(row)
+        try:
+            item['evidence'] = json.loads(item.get('evidence') or '[]')
+        except (TypeError, ValueError, json.JSONDecodeError):
+            item['evidence'] = []
+        items.append(item)
+    return ok({'list': items, 'total': len(items)})
+
+
+@app.route('/api/admin/seller-applications/<int:application_id>', methods=['PATCH'])
+@admin_required
+def admin_review_seller_application(application_id):
+    data = request.get_json(silent=True) or {}
+    status = data.get('status')
+    reason = str(data.get('reason') or '').strip()
+    if status not in {'approved', 'rejected'}:
+        return err('status 只能为 approved 或 rejected', 400)
+    if status == 'rejected' and not reason:
+        return err('驳回必须填写原因', 400)
+    conn = get_db()
+    row = conn.execute(
+        "SELECT * FROM seller_applications WHERE id=?", (application_id,)
+    ).fetchone()
+    if not row:
+        conn.close()
+        return err('摊主申请不存在', 404)
+    operator_id = request.current_user.get('id', 0)
+    conn.execute("""
+        UPDATE seller_applications
+        SET status=?,review_reason=?,reviewed_by=?,
+            reviewed_at=datetime('now','localtime'),
+            updated_at=datetime('now','localtime')
+        WHERE id=?
+    """, (status, reason, operator_id, application_id))
+    if status == 'approved' and row['user_id']:
+        conn.execute(
+            "UPDATE users SET role='seller' WHERE id=? AND role='user'",
+            (row['user_id'],),
+        )
+    conn.commit()
+    conn.close()
+    log_action(
+        operator_id,
+        'review_seller_application',
+        f'seller_application:{application_id}',
+        f'{status}: {reason}',
+    )
+    return ok({'id': application_id, 'status': status})
 
 
 @app.route('/api/admin/reviews', methods=['GET'])

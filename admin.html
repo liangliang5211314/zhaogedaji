@@ -9515,7 +9515,9 @@ window.loadAdminAMapSdk = function loadAdminAMapSdk() {
     })
     .catch(error => {
       window.adminAmapLoadFailed = true;
-      console.warn('[AMap] 后台地图功能不可用：' + error.message);
+      if (!new URLSearchParams(location.search).get('preview')?.startsWith('admin-')) {
+        console.warn('[AMap] 后台地图功能不可用：' + error.message);
+      }
       throw error;
     });
   return window.adminAmapSdkPromise;
@@ -11107,6 +11109,26 @@ async function saveOAuthConfig() {
 })();
 </script>
 
+<style>
+.adm2-legacy-host>[data-adm2-legacy].hidden{display:none!important}
+.adm2-legacy-host>[data-adm2-legacy]:not(.hidden){display:block!important}
+.adm2-legacy-host button,.adm2-legacy-host .btn{min-height:40px!important;border-radius:9px!important;font-family:'Noto Sans SC',sans-serif!important}
+.adm2-legacy-host table{border-collapse:collapse!important;background:#fff!important}
+.adm2-legacy-host th{background:#F7F8FA!important;color:#65707C!important}
+.adm2-legacy-host td,.adm2-legacy-host th{border-color:#EEF0F2!important}
+.adm2-legacy-host [style*="linear-gradient"]{background:#fff!important}
+.adm2-section-tools{min-height:64px;margin-top:16px;padding:10px 16px;display:flex;align-items:center;gap:12px}
+.adm2-section-tools .spacer{flex:1}
+.adm2-empty{min-height:260px;margin-top:16px;padding:32px;display:flex;align-items:center;justify-content:center;text-align:center;color:#77818D}
+.adm2-empty .material-symbols-outlined{display:block;margin:0 auto 10px;color:#A5ADB6;font-size:36px}
+.adm2-mini-grid{margin-top:16px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.adm2-mini-card{min-height:146px;padding:18px}.adm2-mini-card h3{margin:0 0 8px;font-size:15px}.adm2-mini-card p{margin:0;color:#6F7985;font-size:12px;line-height:20px}.adm2-mini-card strong{display:block;margin-top:14px;color:var(--a2-brand);font:700 24px/30px 'Noto Serif SC',serif}
+.adm2-inline-form{margin-top:16px;padding:16px;display:grid;grid-template-columns:1.1fr 2fr 160px auto;gap:12px;align-items:end}.adm2-inline-form label{color:#68717D;font-size:11px}.adm2-inline-form input,.adm2-inline-form textarea,.adm2-inline-form select{width:100%;margin-top:5px}.adm2-inline-form textarea{height:44px;padding-top:10px;resize:none}
+.adm2-list-card{margin-top:16px;overflow:hidden}.adm2-list-row{min-height:64px;padding:12px 18px;border-bottom:1px solid #EEF0F2;display:flex;align-items:center;gap:16px}.adm2-list-row:last-child{border-bottom:0}.adm2-list-row .copy{min-width:0;flex:1}.adm2-list-row .copy strong{display:block;font-size:13px}.adm2-list-row .copy span{display:block;margin-top:4px;color:#7C8692;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.adm2-list-row .meta{color:#6F7985;font-size:11px;white-space:nowrap}
+.adm2-rule-card{margin-top:16px;padding:20px}.adm2-rule-flow{display:grid;grid-template-columns:1fr 32px 1fr 32px 1fr;align-items:center;gap:10px}.adm2-rule-step{min-height:112px;padding:16px;border:1px solid var(--a2-line);border-radius:10px;background:#F8F9FA}.adm2-rule-step strong{display:block;font-size:14px}.adm2-rule-step p{margin:8px 0 0;color:#6F7985;font-size:12px;line-height:20px}.adm2-rule-arrow{text-align:center;color:#A0A8B2}
+@media(max-width:1180px){.adm2-inline-form{grid-template-columns:1fr 1fr}.adm2-mini-grid{grid-template-columns:1fr 1fr}}
+</style>
+
 <script>
 // ══════════════════════════════════════════════════════════════
 // ADMIN V2 · 已验收后台 Figma B1 / B2 / B3
@@ -11183,11 +11205,11 @@ async function saveOAuthConfig() {
   }
   function adm2SimplePages(){
     return `
-      <section class="adm2-page" id="adm2-page-users">${adm2Head('用户与摊主','管理用户账号、摊主认证申请与后台账号。')}<div class="adm2-card adm2-tabs"><button class="adm2-tab active">用户账号</button><button class="adm2-tab">摊主认证</button><button class="adm2-tab">后台账号管理</button></div><div class="adm2-card adm2-placeholder" id="adm2-users-host"><div>${adm2Icon('group')}<h3>用户与摊主</h3><p>账号权限为超级管理员 / 审核员两级。</p></div></div></section>
-      <section class="adm2-page" id="adm2-page-operations">${adm2Head('内容运营','管理公告、轮播图与旅行热门地区配置。')}<div class="adm2-card adm2-tabs"><button class="adm2-tab active">公告</button><button class="adm2-tab">轮播图 · 默认停用</button><button class="adm2-tab">旅行热门地区</button></div><div class="adm2-card adm2-placeholder" id="adm2-operations-host"><div>${adm2Icon('campaign')}<h3>内容运营</h3><p>轮播图能力保留，前台默认停用。</p></div></div></section>
-      <section class="adm2-page" id="adm2-page-reminders">${adm2Head('提醒推送','管理前晚 20:00 与当天 06:30 两次提醒任务。')}<div class="adm2-card adm2-placeholder" id="adm2-reminders-host"><div>${adm2Icon('notifications_active')}<h3>提醒任务</h3><p>每日营业类集市不会创建开集提醒。</p></div></div></section>
-      <section class="adm2-page" id="adm2-page-settings">${adm2Head('APP 设置','仅超级管理员可访问；短信服务与帮助已并入页内 Tab。')}<div class="adm2-card adm2-tabs"><button class="adm2-tab active">APP 设置</button><button class="adm2-tab">短信服务</button><button class="adm2-tab">帮助</button></div><div class="adm2-legacy-host" id="adm2-settings-host"></div></section>
-      <section class="adm2-page" id="adm2-page-collection">${adm2Head('数据采集','保留原有操作流程，仅统一导航、按钮和表格视觉。')}<div class="adm2-card adm2-tabs" id="adm2-collection-tabs"><button class="adm2-tab active">爬虫中心</button><button class="adm2-tab">采集数据库</button><button class="adm2-tab">运行日志</button><button class="adm2-tab">豆包提示词</button></div><div class="adm2-legacy-host" id="adm2-collection-host"></div></section>
+      <section class="adm2-page" id="adm2-page-users">${adm2Head('用户与摊主','管理用户账号、摊主认证申请与后台账号。')}<div class="adm2-card adm2-tabs" id="adm2-users-tabs"><button class="adm2-tab active" data-tab="users" onclick="adm2LoadUsers('users',this)">用户账号</button><button class="adm2-tab" data-tab="sellers" onclick="adm2LoadUsers('sellers',this)">摊主认证</button><button class="adm2-tab" data-tab="admins" onclick="adm2LoadUsers('admins',this)">后台账号管理</button></div><div id="adm2-users-host"></div></section>
+      <section class="adm2-page" id="adm2-page-operations">${adm2Head('内容运营','管理公告、轮播图与旅行热门地区配置。')}<div class="adm2-card adm2-tabs" id="adm2-operations-tabs"><button class="adm2-tab active" data-tab="notices" onclick="adm2LoadOperations('notices',this)">公告</button><button class="adm2-tab" data-tab="banners" onclick="adm2LoadOperations('banners',this)">轮播图 · 默认停用</button><button class="adm2-tab" data-tab="popular" onclick="adm2LoadOperations('popular',this)">旅行热门地区</button></div><div id="adm2-operations-host"></div></section>
+      <section class="adm2-page" id="adm2-page-reminders">${adm2Head('提醒推送','管理前晚 20:00 与当天 06:30 两次提醒任务。')}<div class="adm2-card adm2-tabs" id="adm2-reminder-tabs"><button class="adm2-tab active" data-tab="tasks" onclick="adm2LoadReminders('tasks',this)">待发送任务</button><button class="adm2-tab" data-tab="subscriptions" onclick="adm2LoadReminders('subscriptions',this)">提醒订阅</button><button class="adm2-tab" data-tab="rules" onclick="adm2LoadReminders('rules',this)">生成规则</button></div><div id="adm2-reminders-host"></div></section>
+      <section class="adm2-page" id="adm2-page-settings">${adm2Head('APP 设置','仅超级管理员可访问；短信服务与帮助已并入页内 Tab。')}<div class="adm2-card adm2-tabs" id="adm2-settings-tabs"><button class="adm2-tab active" data-tab="admin-page-appsettings" onclick="adm2SwitchLegacy('settings','admin-page-appsettings',this)">APP 设置</button><button class="adm2-tab" data-tab="admin-page-sms" onclick="adm2SwitchLegacy('settings','admin-page-sms',this)">短信服务</button><button class="adm2-tab" data-tab="admin-page-helpdesk" onclick="adm2SwitchLegacy('settings','admin-page-helpdesk',this)">帮助</button></div><div class="adm2-legacy-host" id="adm2-settings-host"></div></section>
+      <section class="adm2-page" id="adm2-page-collection">${adm2Head('数据采集','保留原有操作流程，仅统一导航、按钮和表格视觉。')}<div class="adm2-card adm2-tabs" id="adm2-collection-tabs"><button class="adm2-tab active" data-tab="admin-page-spider" onclick="adm2SwitchLegacy('collection','admin-page-spider',this)">爬虫中心</button><button class="adm2-tab" data-tab="admin-page-spider-data" onclick="adm2SwitchLegacy('collection','admin-page-spider-data',this)">采集数据库</button><button class="adm2-tab" data-tab="admin-page-spider-log" onclick="adm2SwitchLegacy('collection','admin-page-spider-log',this)">运行日志</button><button class="adm2-tab" data-tab="admin-page-prompt-gen" onclick="adm2SwitchLegacy('collection','admin-page-prompt-gen',this)">豆包提示词</button></div><div class="adm2-legacy-host" id="adm2-collection-host"></div></section>
       <section class="adm2-page" id="adm2-page-logs">${adm2Head('操作日志','每条审核、编辑与系统操作均记录操作人。')}<div class="adm2-card adm2-table-card"><table class="adm2-table"><thead><tr><th>时间</th><th>操作人</th><th>动作</th><th>目标</th><th>详情</th><th>IP</th></tr></thead><tbody id="adm2-log-body"></tbody></table><div class="adm2-table-footer"><span id="adm2-log-total">加载中…</span></div></div></section>`;
   }
 
@@ -11203,12 +11225,13 @@ async function saveOAuthConfig() {
     document.getElementById('adm2-user-role').textContent = role === 'superadmin' ? '超级管理员' : '审核员';
     root.querySelectorAll('[data-super-only="true"]').forEach(el=>el.style.display=role==='superadmin'?'flex':'none');
     const page = adm2Preview === 'admin-drawer' ? 'markets' : (adm2Preview.replace('admin-','') || 'todo');
-    adm2Go(['markets','review','todo','overview','users','operations','reminders','settings','collection','logs'].includes(page)?page:'todo');
+    const safePage=role!=='superadmin'&&['settings','collection','logs'].includes(page)?'todo':page;
+    adm2Go(['markets','review','todo','overview','users','operations','reminders','settings','collection','logs'].includes(safePage)?safePage:'todo');
     if (adm2Preview === 'admin-drawer') setTimeout(() => adm2OpenDrawer('sample-lg'), 0);
   };
 
   window.adm2Go = function(page,tab){
-    if (['settings','collection'].includes(page) && adm2State.role !== 'superadmin') { adm2Toast('审核员不可进入系统设置'); return; }
+    if (['settings','collection','logs'].includes(page) && adm2State.role !== 'superadmin') { adm2Toast('审核员不可进入系统设置'); return; }
     adm2State.page = page;
     document.querySelectorAll('.adm2-page').forEach(el=>el.classList.remove('active'));
     document.getElementById(`adm2-page-${page}`)?.classList.add('active');
@@ -11219,15 +11242,26 @@ async function saveOAuthConfig() {
     if(page==='overview') adm2LoadOverview();
     if(page==='markets') adm2LoadMarkets(1);
     if(page==='review'){ if(tab) adm2State.reviewTab=tab; adm2LoadReview(); }
+    if(page==='users') adm2LoadUsers(tab||'users');
+    if(page==='operations') adm2LoadOperations(tab||'notices');
+    if(page==='reminders') adm2LoadReminders(tab||'tasks');
     if(page==='logs') adm2LoadLogs();
     if(page==='settings') adm2MountLegacy('adm2-settings-host',['admin-page-appsettings','admin-page-sms','admin-page-helpdesk']);
     if(page==='collection') adm2MountLegacy('adm2-collection-host',['admin-page-spider','admin-page-spider-data','admin-page-spider-log','admin-page-prompt-gen']);
   };
   function adm2MountLegacy(hostId,ids){
     const host=document.getElementById(hostId); if(!host||host.dataset.mounted)return;
-    ids.forEach((id,index)=>{ const el=document.getElementById(id); if(el){ el.classList.toggle('hidden',index!==0); el.dataset.adm2Legacy='1'; host.appendChild(el); }});
+    ids.forEach((id,index)=>{ const el=document.getElementById(id); if(el){ el.classList.toggle('hidden',index!==0); el.dataset.adm2Legacy='1'; host.appendChild(el); adm2StripEmoji(el); }});
     host.dataset.mounted='1';
   }
+  function adm2StripEmoji(root){
+    root.querySelectorAll('*').forEach(el=>{ if(/^(SCRIPT|STYLE)$/.test(el.tagName))return; el.childNodes.forEach(node=>{ if(node.nodeType===3)node.nodeValue=node.nodeValue.replace(/[\p{Extended_Pictographic}\uFE0F]/gu,'').replace(/^\s+/,' '); }); });
+  }
+  window.adm2SwitchLegacy=function(group,id,button){
+    const host=document.getElementById(`adm2-${group}-host`); if(!host)return;
+    host.querySelectorAll('[data-adm2-legacy]').forEach(el=>el.classList.toggle('hidden',el.id!==id));
+    document.querySelectorAll(`#adm2-${group}-tabs .adm2-tab`).forEach(el=>el.classList.toggle('active',el===button||el.dataset.tab===id));
+  };
   window.adm2Toast = function(message){
     const toast=document.getElementById('adm2-toast'); if(!toast)return;
     toast.querySelector('span:last-child').textContent=message; toast.classList.add('show'); clearTimeout(toast._timer); toast._timer=setTimeout(()=>toast.classList.remove('show'),2200);
@@ -11293,10 +11327,60 @@ async function saveOAuthConfig() {
   function adm2CollectSchedule(){ const type=document.getElementById('a2-time-type').value; const start=[...document.querySelectorAll('#a2-time-start')].find(el=>el.offsetParent)?.value||'07:00'; const end=[...document.querySelectorAll('#a2-time-end')].find(el=>el.offsetParent)?.value||'13:00'; let rule={}; let source=''; if(type==='daily')source='每日营业，特殊天气及通知除外'; if(type==='lunar'||type==='solar'){const days=[...document.querySelectorAll(`#a2-${type}-picker input:checked`)].map(el=>+el.value).sort((a,b)=>a-b);if(!days.length)throw new Error('请至少选择一个开集日序');rule={days};if(type==='lunar')rule.leap_month=document.getElementById('a2-lunar-leap').value;source=`${type==='lunar'?'阴历':'阳历'}每月${days.join('、')}日`;} if(type==='weekly'){const weekdays=[...document.querySelectorAll('#a2-weekday-picker input:checked')].map(el=>+el.value);if(!weekdays.length)throw new Error('请至少选择一个星期');rule={weekdays};source=`每周 ${weekdays.join('、')}`;} if(type==='specific_dates'){const entries=[...document.querySelectorAll('.adm2-specific-row')].map(row=>{const e={calendar:row.querySelector('.a2-cal').value,month:+row.querySelector('.a2-month').value,day:+row.querySelector('.a2-day').value,duration_days:1};const year=+row.querySelector('.a2-year').value;if(year)e.year=year;return e;});if(!entries.length||entries.some(e=>!e.month||!e.day))throw new Error('请完整填写至少一个指定日期');rule={entries};source='多个指定日期';} const exceptions=[...document.querySelectorAll('.adm2-exception-row')].map(row=>({date:row.querySelector('.a2-ex-date').value,action:row.querySelector('.a2-ex-action').value,reason:row.querySelector('.a2-ex-reason').value.trim(),source:'admin',updated_at:new Date().toISOString()})); if(exceptions.some(x=>!x.date||!x.reason))throw new Error('例外日期与原因不能为空'); return{version:2,timezone:'Asia/Shanghai',type,time_slots:[{start,end}],rule,exceptions,source_text:source,migration_status:'native'}; }
   window.adm2SaveSchedule=async function(){ let schedule;try{schedule=adm2CollectSchedule()}catch(e){adm2Toast(e.message);return;} if(adm2Preview||adm2State.activeMarket?.id?.startsWith('sample-')){adm2Toast('规则校验通过（预览态不写库）');return;} const valid=await API.post('/admin/open-time/validate',{open_time:schedule}); if(valid?.code!==200){adm2Toast(valid?.errors?.[0]||valid?.msg||'校验失败');return;} const saved=await API.put(`/admin/markets/${adm2State.activeMarket.id}`,{open_time:schedule}); if(saved?.code&&saved.code!==200){adm2Toast(saved.msg||'保存失败');return;} adm2Toast('开集规则已保存，操作人已记录');adm2CloseDrawer();adm2LoadMarkets(adm2State.marketPage); };
 
+  function adm2ActivateTabs(group,tab,button){ document.querySelectorAll(`#adm2-${group}-tabs .adm2-tab`).forEach(el=>el.classList.toggle('active',el===button||el.dataset.tab===tab)); }
+  function adm2Empty(icon,title,copy){ return `<div class="adm2-card adm2-empty"><div>${adm2Icon(icon)}<strong>${title}</strong><p>${copy}</p></div></div>`; }
+
+  window.adm2LoadUsers=async function(tab='users',button){
+    adm2ActivateTabs('users',tab,button); const host=document.getElementById('adm2-users-host'); if(!host)return;
+    if(tab==='sellers'){
+      const res=adm2Preview?null:await API.get('/admin/seller-applications?status=pending');
+      const list=res?.data?.list||[];
+      host.innerHTML=`<div class="adm2-card adm2-section-tools"><strong>摊主认证申请</strong><span style="color:#7A8490">只核验身份与经营信息，处理结果记录操作人</span><span class="spacer"></span><span class="adm2-count">${adm2Preview?3:list.length}</span></div>${list.length?adm2SellerTable(list):adm2Empty('storefront','暂无待审摊主申请','C 端本期只预留入口；收到申请后将在这里进入左列表右详情审核。')}`;
+      return;
+    }
+    const keyword=document.getElementById('adm2-user-keyword')?.value.trim()||'';
+    let res=adm2Preview?null:await API.get(`/admin/users?page=1&per_page=30&kw=${encodeURIComponent(keyword)}`);
+    let list=res?.data?.list||[];
+    if(adm2Preview) list=[{id:1,nickname:'亮',phone:'138****0001',region:'山东 · 临沂',role:'superadmin',status:'normal',created_at:'2026-06-18'},{id:2,nickname:'王宁',phone:'139****2188',region:'河北 · 保定',role:'admin',status:'normal',created_at:'2026-07-01'},{id:3,nickname:'旅行者 小满',phone:'136****3077',region:'江苏 · 苏州',role:'user',status:'normal',created_at:'2026-07-08'},{id:4,nickname:'本地用户 老周',phone:'135****8910',region:'山东 · 临沂',role:'user',status:'banned',created_at:'2026-07-09'}];
+    if(tab==='admins')list=list.filter(u=>['admin','superadmin'].includes(u.role));
+    host.innerHTML=`<div class="adm2-card adm2-section-tools"><input class="adm2-field adm2-search-field" id="adm2-user-keyword" placeholder="搜索昵称或手机号"><button class="adm2-primary-button" onclick="adm2LoadUsers('${tab}')">查询</button><span class="spacer"></span>${tab==='admins'?'<span style="color:#68717D;font-size:12px">两级权限：超级管理员 / 审核员</span>':'<span style="color:#68717D;font-size:12px">普通用户不拥有后台权限</span>'}</div><div class="adm2-card adm2-table-card"><table class="adm2-table"><thead><tr><th>用户</th><th>手机号</th><th>地区</th><th>角色</th><th>状态</th><th>注册时间</th><th>操作</th></tr></thead><tbody>${list.map(u=>`<tr><td><strong>${adm2Esc(u.nickname||'未设置昵称')}</strong><small>#${adm2Esc(u.id)}</small></td><td>${adm2Esc(u.phone||'-')}</td><td>${adm2Esc(u.region||'-')}</td><td>${adm2Role(u.role)}</td><td><span class="adm2-table-status ${u.status==='normal'?'published':'review'}">${u.status==='normal'?'正常':'已封禁'}</span></td><td>${adm2Esc(u.created_at||'-')}</td><td>${u.role==='superadmin'?'<span style="color:#8A939D">受保护</span>':`<button class="adm2-link-button" onclick="adm2ToggleUser(${u.id},'${u.status==='banned'?'unban':'ban'}')">${u.status==='banned'?'解封':'封禁'}</button>`}</td></tr>`).join('')||`<tr><td colspan="7">暂无账号</td></tr>`}</tbody></table><div class="adm2-table-footer">共 ${res?.data?.total??list.length} 个账号</div></div>`;
+  };
+  function adm2Role(role){ const map={superadmin:'超级管理员',admin:'审核员',seller:'摊主',user:'普通用户'}; return `<span class="adm2-table-status ${role==='superadmin'?'review':role==='admin'?'pending':'published'}">${map[role]||adm2Esc(role)}</span>`; }
+  function adm2SellerTable(list){ return `<div class="adm2-card adm2-table-card"><table class="adm2-table"><thead><tr><th>申请人</th><th>经营集市</th><th>经营品类</th><th>提交时间</th><th>操作人</th><th>操作</th></tr></thead><tbody>${list.map(x=>`<tr><td><strong>${adm2Esc(x.nickname||x.applicant_name||'申请人')}</strong><small>${adm2Esc(x.phone||'')}</small></td><td>${adm2Esc(x.market_name||'-')}</td><td>${adm2Esc(x.business_category||'-')}</td><td>${adm2Esc(x.created_at||'-')}</td><td>${adm2Esc(x.reviewer_name||'未处理')}</td><td><button class="adm2-link-button" onclick="adm2ReviewSeller(${x.id},'approved')">通过</button><button class="adm2-link-button" onclick="adm2ReviewSeller(${x.id},'rejected')">驳回</button></td></tr>`).join('')}</tbody></table></div>`; }
+  window.adm2ToggleUser=async function(id,action){ if(adm2Preview){adm2Toast('预览态不写库');return;} const res=await API.post(`/admin/users/${id}/${action}`,{}); adm2Toast(res?.code===200?'账号状态已更新':'操作失败'); if(res?.code===200)adm2LoadUsers('users'); };
+  window.adm2ReviewSeller=async function(id,status){ if(adm2Preview){adm2Toast('已记录审核结果（预览）');return;} const reason=status==='rejected'?'资料不完整，请补充后重试':'资料核验通过'; const res=await apiCall('PATCH',`/admin/seller-applications/${id}`,{status,reason}); adm2Toast(res?.code===200?'摊主申请已处理':'处理失败'); if(res?.code===200)adm2LoadUsers('sellers'); };
+
+  window.adm2LoadOperations=async function(tab='notices',button){
+    adm2ActivateTabs('operations',tab,button); const host=document.getElementById('adm2-operations-host'); if(!host)return;
+    if(tab==='popular'){
+      const res=adm2Preview?null:await fetch('/api/regions/popular?limit=6').then(r=>r.json()).catch(()=>null); const list=res?.data||[{display_name:'山东 · 临沂',market_count:86,featured_tags:['土货特产','庙会','早市']},{display_name:'河北 · 唐县',market_count:42,featured_tags:['农村大集','山货']},{display_name:'云南 · 大理',market_count:31,featured_tags:['民族集市','手作']}];
+      host.innerHTML=`<div class="adm2-card adm2-section-tools"><strong>旅行热门地区</strong><span style="color:#7A8490">按地区聚合集市数量与特色标签，前台自动读取</span><span class="spacer"></span><span class="adm2-count">${list.length}</span></div><div class="adm2-mini-grid">${list.map(x=>`<div class="adm2-card adm2-mini-card"><h3>${adm2Esc(x.display_name||x.region)}</h3><p>${adm2Esc((x.featured_tags||[]).join(' · ')||'暂无特色标签')}</p><strong>${x.market_count||0} 个集市</strong></div>`).join('')}</div>`; return;
+    }
+    if(tab==='banners'){
+      const res=adm2Preview?null:await API.get('/admin/banners'); const list=Array.isArray(res?.data)?res.data:[];
+      host.innerHTML=`<div class="adm2-card adm2-section-tools"><strong>首页轮播图</strong><span class="adm2-table-status review">前台默认停用</span><span style="color:#7A8490">能力保留，需要时由 APP 设置开启</span><span class="spacer"></span><button class="adm2-primary-button" onclick="adm2AddBanner()">新增轮播图</button></div>${list.length?`<div class="adm2-card adm2-list-card">${list.map(x=>`<div class="adm2-list-row"><div class="copy"><strong>${adm2Esc(x.title||'未命名轮播图')}</strong><span>${adm2Esc(x.image_url||x.link_url||'')}</span></div><span class="meta">排序 ${x.sort_order||0}</span><button class="adm2-link-button" onclick="adm2DeleteOperation('banners',${x.id})">删除</button></div>`).join('')}</div>`:adm2Empty('imagesmode','暂无轮播图','前台默认停用；新增素材后仍需在 APP 设置中显式开启。')}`; return;
+    }
+    const res=adm2Preview?null:await API.get('/admin/notices'); const list=res?.data||[];
+    host.innerHTML=`<div class="adm2-card adm2-inline-form"><label>公告标题<input class="adm2-field" id="adm2-notice-title" placeholder="例如：特殊天气停市提醒"></label><label>公告内容<textarea class="adm2-field" id="adm2-notice-content" placeholder="面向用户的简短说明"></textarea></label><label>类型<select class="adm2-field" id="adm2-notice-type"><option value="info">普通通知</option><option value="warning">重要提醒</option></select></label><button class="adm2-primary-button" onclick="adm2AddNotice()">发布公告</button></div>${list.length?`<div class="adm2-card adm2-list-card">${list.map(x=>`<div class="adm2-list-row"><span class="adm2-table-status ${x.type==='warning'?'review':'published'}">${x.type==='warning'?'重要':'普通'}</span><div class="copy"><strong>${adm2Esc(x.title)}</strong><span>${adm2Esc(x.content)}</span></div><span class="meta">${adm2Esc(x.created_at||'')}</span><button class="adm2-link-button" onclick="adm2DeleteOperation('notices',${x.id})">删除</button></div>`).join('')}</div>`:adm2Empty('campaign','暂无公告','发布后进入 C 端公告能力，所有变更记录操作人。')}`;
+  };
+  window.adm2AddNotice=async function(){ const title=document.getElementById('adm2-notice-title')?.value.trim();const content=document.getElementById('adm2-notice-content')?.value.trim();if(!title||!content){adm2Toast('请填写标题与内容');return;}if(adm2Preview){adm2Toast('公告校验通过（预览）');return;}const res=await API.post('/admin/notices',{title,content,type:document.getElementById('adm2-notice-type').value});adm2Toast(res?.code===200?'公告已发布':'发布失败');if(res?.code===200)adm2LoadOperations('notices'); };
+  window.adm2AddBanner=async function(){ if(adm2Preview){adm2Toast('预览态不写库');return;}adm2Toast('请在素材库上传图片后新增轮播图'); };
+  window.adm2DeleteOperation=async function(type,id){ if(adm2Preview){adm2Toast('预览态不写库');return;}const res=await API.delete(`/admin/${type}/${id}`);adm2Toast(res?.code===200?'已删除':'删除失败');if(res?.code===200)adm2LoadOperations(type); };
+
+  window.adm2LoadReminders=async function(tab='tasks',button){
+    adm2ActivateTabs('reminder',tab,button); const host=document.getElementById('adm2-reminders-host'); if(!host)return;
+    if(tab==='rules'){host.innerHTML=`<div class="adm2-card adm2-rule-card"><div class="adm2-rule-flow"><div class="adm2-rule-step"><strong>前一天 20:00</strong><p>为次日确认开集的订阅生成 evening 任务。</p></div><div class="adm2-rule-arrow">→</div><div class="adm2-rule-step"><strong>当天 06:30</strong><p>为当天确认开集的订阅生成 morning 任务。</p></div><div class="adm2-rule-arrow">→</div><div class="adm2-rule-step"><strong>跳过不可靠数据</strong><p>每日营业与 needs_review 不创建开集提醒。</p></div></div><div style="margin-top:18px;display:flex;gap:12px"><button class="adm2-primary-button" onclick="adm2BuildReminderTasks('evening')">生成晚间任务</button><button class="adm2-ghost-button" onclick="adm2BuildReminderTasks('morning')">生成早间任务</button></div></div>`;return;}
+    const endpoint=tab==='tasks'?'/admin/reminder-tasks?status=pending':'/admin/reminders'; const res=adm2Preview?null:await API.get(endpoint); let list=res?.data?.list||[];
+    if(adm2Preview)list=tab==='tasks'?[{id:1,market_name:'沂州古城庙会',nickname:'旅行者 小满',slot:'evening',scheduled_at:'2026-07-13 20:00',status:'pending'},{id:2,market_name:'李官大集',nickname:'本地用户 老周',slot:'morning',scheduled_at:'2026-07-14 06:30',status:'pending'}]:[{id:1,market_name:'李官大集',nickname:'本地用户 老周',remind_type:'recurring',remind_evening:1,remind_morning:1,created_at:'2026-07-01'}];
+    host.innerHTML=`<div class="adm2-card adm2-section-tools"><strong>${tab==='tasks'?'待发送提醒任务':'提醒订阅'}</strong><span style="color:#7A8490">${tab==='tasks'?'按计划发送并记录状态':'每日营业类不提供开集提醒'}</span><span class="spacer"></span><span class="adm2-count">${list.length}</span></div>${list.length?`<div class="adm2-card adm2-list-card">${list.map(x=>`<div class="adm2-list-row"><span class="adm2-table-status ${x.slot==='morning'?'pending':'review'}">${x.slot==='morning'?'早间':x.slot==='evening'?'晚间':x.remind_type==='recurring'?'长期':'一次'}</span><div class="copy"><strong>${adm2Esc(x.market_name)}</strong><span>${adm2Esc(x.nickname||'用户')} · ${adm2Esc(x.scheduled_at||x.created_at||'')}</span></div><span class="meta">${tab==='tasks'?'待发送':'前晚 + 当晨'}</span>${tab==='tasks'?`<button class="adm2-link-button" onclick="adm2MarkTask(${x.id})">标记已发送</button>`:''}</div>`).join('')}</div>`:adm2Empty('notifications_paused','当前没有任务','系统会在 20:00 与 06:30 生成符合规则的提醒。')}`;
+  };
+  window.adm2BuildReminderTasks=async function(slot){if(adm2Preview){adm2Toast(`${slot==='evening'?'晚间':'早间'}任务生成规则已验证`);return;}const now=new Date();now.setHours(slot==='evening'?20:6,slot==='evening'?0:30,0,0);const res=await API.post('/admin/reminders/build-tasks',{at:now.toISOString()});adm2Toast(res?.code===200?`已生成 ${res.data.created||0} 条任务`:'生成失败');};
+  window.adm2MarkTask=async function(id){if(adm2Preview){adm2Toast('已标记发送（预览）');return;}const res=await API.post(`/admin/reminder-tasks/${id}/mark-sent`,{});adm2Toast(res?.code===200?'已标记发送':'操作失败');if(res?.code===200)adm2LoadReminders('tasks');};
+
   async function adm2LoadLogs(){ let res=adm2Preview?null:await API.get('/admin/logs?page=1&per_page=50'); const logs=res?.data?.logs||[{created_at:'2026-07-13 10:42',operator_name:'审核员 王宁',action:'approve_review',target:'review:18',detail:'评价审核通过',ip:'127.0.0.1'},{created_at:'2026-07-13 10:38',operator_name:'超级管理员 亮',action:'update_market',target:'market:王京大集',detail:'AI 修复后人工确认',ip:'127.0.0.1'}]; document.getElementById('adm2-log-body').innerHTML=logs.map(l=>`<tr><td>${adm2Esc(l.created_at)}</td><td>${adm2Esc(l.operator_name||'系统')}</td><td>${adm2Esc(l.action)}</td><td>${adm2Esc(l.target)}</td><td>${adm2Esc(l.detail)}</td><td>${adm2Esc(l.ip)}</td></tr>`).join(''); document.getElementById('adm2-log-total').textContent=`共 ${res?.data?.total??logs.length} 条操作记录`; }
 
   document.addEventListener('keydown',event=>{ if(adm2State.page!=='review'||/INPUT|SELECT|TEXTAREA/.test(event.target.tagName))return; const key=event.key.toLowerCase(); if(key==='a')adm2ApproveCurrent(); if(key==='r')document.getElementById('adm2-reject-reason')?.focus(); if(key==='j')adm2SelectReview(Math.min(adm2State.reviewItems.length-1,adm2State.reviewIndex+1)); if(key==='k')adm2SelectReview(Math.max(0,adm2State.reviewIndex-1)); });
-  if(adm2Preview.startsWith('admin-')){ document.getElementById('admin-login-page').style.display='none'; document.getElementById('admin-main').style.display=''; setTimeout(()=>initAdminV2('亮','superadmin'),0); }
+  if(adm2Preview.startsWith('admin-')){ const previewRole=new URLSearchParams(location.search).get('role')==='reviewer'?'admin':'superadmin'; document.getElementById('admin-login-page').style.display='none'; document.getElementById('admin-main').style.display=''; setTimeout(()=>initAdminV2(previewRole==='admin'?'王宁':'亮',previewRole),0); }
 })();
 </script>
 </body>
