@@ -5,8 +5,15 @@
 import os, json, uuid, sqlite3, hashlib, hmac, random, time, re, logging, math
 from datetime import datetime, timedelta
 from functools import wraps
+from zoneinfo import ZoneInfo
 from flask import Flask, request, jsonify, send_from_directory
-from open_time import OpenTimeValidationError, compute_month_calendar, compute_open_time
+from open_time import (
+    OpenTimeValidationError,
+    compute_month_calendar,
+    compute_open_time,
+    is_open_on_date,
+    validate_open_time,
+)
 
 # ── 配置 & 日志（优先于其他模块）────────────────────────────
 try:
@@ -165,9 +172,13 @@ def init_db():
             rating      REAL NOT NULL,
             content     TEXT DEFAULT '',
             images      TEXT DEFAULT '[]',
+            videos      TEXT DEFAULT '[]',
             tags        TEXT DEFAULT '[]',
             likes       INTEGER DEFAULT 0,
             status      TEXT DEFAULT 'pending',
+            audit_reason TEXT DEFAULT '',
+            audited_by  INTEGER,
+            audited_at  TEXT DEFAULT '',
             created_at  TEXT DEFAULT (datetime('now','localtime'))
         );
 
@@ -252,10 +263,27 @@ def init_db():
             user_id     INTEGER NOT NULL,
             market_id   TEXT NOT NULL,
             remind_type TEXT NOT NULL DEFAULT 'once',
+            remind_evening INTEGER NOT NULL DEFAULT 1,
+            remind_morning INTEGER NOT NULL DEFAULT 1,
             status      TEXT NOT NULL DEFAULT 'active',
             created_at  TEXT DEFAULT (datetime('now','localtime')),
             updated_at  TEXT DEFAULT (datetime('now','localtime')),
             UNIQUE(user_id, market_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS reminder_deliveries (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            reminder_id  INTEGER NOT NULL,
+            user_id      INTEGER NOT NULL,
+            market_id    TEXT NOT NULL,
+            open_date    TEXT NOT NULL,
+            slot         TEXT NOT NULL,
+            scheduled_at TEXT NOT NULL,
+            status       TEXT NOT NULL DEFAULT 'pending',
+            sent_at      TEXT DEFAULT '',
+            error        TEXT DEFAULT '',
+            created_at   TEXT DEFAULT (datetime('now','localtime')),
+            UNIQUE(reminder_id, open_date, slot)
         );
 
         CREATE TABLE IF NOT EXISTS data_review_queue (
@@ -276,6 +304,8 @@ def init_db():
 
         CREATE INDEX IF NOT EXISTS idx_reminder_user   ON market_reminders(user_id);
         CREATE INDEX IF NOT EXISTS idx_reminder_market ON market_reminders(market_id, status);
+        CREATE INDEX IF NOT EXISTS idx_reminder_delivery_due
+        ON reminder_deliveries(status, scheduled_at);
 
         CREATE TABLE IF NOT EXISTS ai_collect_logs (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -322,6 +352,12 @@ def init_db():
         "ALTER TABLE markets ADD COLUMN review_count INTEGER DEFAULT 0",
         "ALTER TABLE markets ADD COLUMN rating REAL",
         "ALTER TABLE markets ADD COLUMN scale TEXT DEFAULT ''",
+        "ALTER TABLE reviews ADD COLUMN videos TEXT DEFAULT '[]'",
+        "ALTER TABLE reviews ADD COLUMN audit_reason TEXT DEFAULT ''",
+        "ALTER TABLE reviews ADD COLUMN audited_by INTEGER",
+        "ALTER TABLE reviews ADD COLUMN audited_at TEXT DEFAULT ''",
+        "ALTER TABLE market_reminders ADD COLUMN remind_evening INTEGER NOT NULL DEFAULT 1",
+        "ALTER TABLE market_reminders ADD COLUMN remind_morning INTEGER NOT NULL DEFAULT 1",
     ]:
         try: conn.execute(col_sql)
         except: pass
@@ -460,6 +496,34 @@ def ok(data=None, msg='success'):
 
 def err(msg, code=400):
     return jsonify({'code': code, 'msg': msg}), code
+
+
+def _json_string_list(value, field):
+    if value is None:
+        return []
+    if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+        raise ValueError(f'{field} 必须是字符串数组')
+    return [item.strip() for item in value if item.strip()]
+
+
+def _validated_admin_open_time(value):
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except (TypeError, ValueError) as exc:
+            raise OpenTimeValidationError(['open_time 必须是有效 JSON 对象']) from exc
+    canonical = validate_open_time(value)
+    if canonical['migration_status'] == 'needs_review':
+        raise OpenTimeValidationError(['后台编辑器不能写入 needs_review 规则'])
+    return canonical
+
+
+def _open_time_error(exc):
+    return jsonify({
+        'code': 400,
+        'msg': '开集规律不符合 open_time v2 契约',
+        'errors': list(getattr(exc, 'errors', [str(exc)])),
+    }), 400
 
 def _generate_uid():
     conn = get_db()
@@ -1935,7 +1999,8 @@ def get_reminders():
     u    = request.current_user
     conn = get_db()
     rows = conn.execute("""
-        SELECT r.id, r.market_id, r.remind_type, r.status, r.created_at,
+        SELECT r.id, r.market_id, r.remind_type, r.remind_evening,
+               r.remind_morning, r.status, r.created_at,
                m.name AS market_name, m.category, m.icon, m.region,
                m.address, m.open_time
         FROM market_reminders r
@@ -1944,7 +2009,14 @@ def get_reminders():
         ORDER BY r.created_at DESC
     """, (u['id'],)).fetchall()
     conn.close()
-    return ok([dict(r) for r in rows])
+    items = []
+    for row in rows:
+        item = dict(row)
+        item['remind_evening'] = bool(item['remind_evening'])
+        item['remind_morning'] = bool(item['remind_morning'])
+        item['reminder_times'] = ['前一天 20:00', '当天 06:30']
+        items.append(item)
+    return ok(items)
 
 
 @app.route('/api/reminders/<market_id>', methods=['POST'])
@@ -1956,23 +2028,56 @@ def set_reminder(market_id):
     remind_type = data.get('remind_type', 'once')
     if remind_type not in ('once', 'recurring'):
         return err('remind_type 必须为 once 或 recurring', 400)
+    remind_evening = data.get('remind_evening', True)
+    remind_morning = data.get('remind_morning', True)
+    if not isinstance(remind_evening, bool) or not isinstance(remind_morning, bool):
+        return err('remind_evening 和 remind_morning 必须为布尔值', 400)
+    if not remind_evening and not remind_morning:
+        return err('至少开启一个提醒时段', 400)
     conn = get_db()
-    m = conn.execute("SELECT id FROM markets WHERE id=?", (market_id,)).fetchone()
+    m = conn.execute(
+        "SELECT id, open_time FROM markets WHERE id=? AND status='published'",
+        (market_id,),
+    ).fetchone()
     if not m:
         conn.close()
         return err('集市不存在', 404)
+    try:
+        open_time = validate_open_time(json.loads(m['open_time'] or '{}'))
+        if open_time['migration_status'] == 'needs_review':
+            raise OpenTimeValidationError(['needs_review 记录禁止创建提醒'])
+    except (OpenTimeValidationError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        conn.close()
+        return jsonify({
+            'code': 422,
+            'msg': '集期需要人工复核，暂不能创建提醒',
+            'errors': list(getattr(exc, 'errors', [str(exc)])),
+        }), 422
+    if open_time['type'] == 'daily':
+        conn.close()
+        return err('每日营业类集市不提供开集提醒', 400)
     conn.execute("""
-        INSERT INTO market_reminders(user_id, market_id, remind_type, status, updated_at)
-        VALUES(?, ?, ?, 'active', datetime('now','localtime'))
+        INSERT INTO market_reminders(
+            user_id, market_id, remind_type, remind_evening, remind_morning,
+            status, updated_at
+        ) VALUES(?, ?, ?, ?, ?, 'active', datetime('now','localtime'))
         ON CONFLICT(user_id, market_id) DO UPDATE SET
             remind_type=excluded.remind_type,
+            remind_evening=excluded.remind_evening,
+            remind_morning=excluded.remind_morning,
             status='active',
             updated_at=datetime('now','localtime')
-    """, (u['id'], market_id, remind_type))
+    """, (u['id'], market_id, remind_type, int(remind_evening), int(remind_morning)))
     conn.commit()
     conn.close()
     label = '提醒一次' if remind_type == 'once' else '长期提醒'
-    return ok({'remind_type': remind_type, 'label': label})
+    return ok({
+        'remind_type': remind_type,
+        'label': label,
+        'remind_evening': remind_evening,
+        'remind_morning': remind_morning,
+        'reminder_times': ['前一天 20:00', '当天 06:30'],
+    })
 
 
 @app.route('/api/reminders/<market_id>', methods=['DELETE'])
@@ -1997,12 +2102,20 @@ def get_reminder_status(market_id):
     u    = request.current_user
     conn = get_db()
     row  = conn.execute(
-        "SELECT remind_type FROM market_reminders WHERE user_id=? AND market_id=? AND status='active'",
+        """SELECT remind_type, remind_evening, remind_morning
+           FROM market_reminders
+           WHERE user_id=? AND market_id=? AND status='active'""",
         (u['id'], market_id)
     ).fetchone()
     conn.close()
     if row:
-        return ok({'active': True, 'remind_type': row['remind_type']})
+        return ok({
+            'active': True,
+            'remind_type': row['remind_type'],
+            'remind_evening': bool(row['remind_evening']),
+            'remind_morning': bool(row['remind_morning']),
+            'reminder_times': ['前一天 20:00', '当天 06:30'],
+        })
     return ok({'active': False})
 
 
@@ -2074,6 +2187,7 @@ def get_reviews():
     for r in rows:
         d = dict(r)
         d['images'] = json.loads(d.get('images') or '[]')
+        d['videos'] = json.loads(d.get('videos') or '[]')
         d['tags']   = json.loads(d.get('tags')   or '[]')
         d['userNick']   = d.pop('nickname', '匿名')
         d['userAvatar'] = d.pop('avatar',   '👤')
@@ -2089,19 +2203,33 @@ def submit_review():
     mid  = data.get('marketId') or data.get('market_id')
     if not mid:
         return err('缺少集市ID')
-    rating  = float(data['rating']) if data.get('rating') else None
+    try:
+        rating = float(data['rating'])
+    except (KeyError, TypeError, ValueError):
+        return err('rating 必须为 1 到 5', 400)
+    if not 1 <= rating <= 5:
+        return err('rating 必须为 1 到 5', 400)
     content = data.get('content', '').strip()
+    try:
+        images = _json_string_list(data.get('images'), 'images')
+        videos = _json_string_list(data.get('videos'), 'videos')
+        tags = _json_string_list(data.get('tags'), 'tags')
+    except ValueError as exc:
+        return err(str(exc), 400)
+    if not content and not images and not videos:
+        return err('请填写文字或上传图片/视频', 400)
     conn    = get_db()
     m       = conn.execute("SELECT id FROM markets WHERE id=?", (mid,)).fetchone()
     if not m:
         conn.close()
         return err('集市不存在', 404)
     conn.execute("""
-        INSERT INTO reviews(market_id,user_id,rating,content,images,tags,status)
-        VALUES(?,?,?,?,?,?,?)
+        INSERT INTO reviews(market_id,user_id,rating,content,images,videos,tags,status)
+        VALUES(?,?,?,?,?,?,?,?)
     """, (mid, u['id'], rating, content,
-          json.dumps(data.get('images', []), ensure_ascii=False),
-          json.dumps(data.get('tags',   []), ensure_ascii=False),
+          json.dumps(images, ensure_ascii=False),
+          json.dumps(videos, ensure_ascii=False),
+          json.dumps(tags, ensure_ascii=False),
           'pending'))
     conn.commit()
     conn.close()
@@ -3714,6 +3842,12 @@ def admin_reject_market(market_id):
 @admin_required
 def admin_add_market():
     data      = request.get_json(force=True)
+    try:
+        open_time = _validated_admin_open_time(
+            data.get('openTime', data.get('open_time'))
+        )
+    except OpenTimeValidationError as exc:
+        return _open_time_error(exc)
     cat       = data.get('category', '集市')
     icon_map  = {'早市':'🌅','集市':'🏮','夜市':'🌙','农贸市场':'🌾',
                  '宠物市场':'🐾','古玩市场':'🏺','花鸟市场':'🌸',
@@ -3732,8 +3866,7 @@ def admin_add_market():
     """, (
         market_id, data['name'], cat,
         data.get('address',''), data.get('region',''),
-        json.dumps(data.get('openTime', data.get('open_time', {})),
-                   ensure_ascii=False),
+        json.dumps(open_time, ensure_ascii=False),
         data.get('scale',''),
         data.get('phone',''),
         json.dumps(data.get('tags',[]), ensure_ascii=False),
@@ -3775,19 +3908,42 @@ def admin_update_market(market_id):
                        'icon','bg','tags','scale')}
     if 'tags' in fields and isinstance(fields['tags'], (list, dict)):
         fields['tags'] = json.dumps(fields['tags'], ensure_ascii=False)
-    if 'openTime' in data:
-        fields['open_time'] = json.dumps(data['openTime'], ensure_ascii=False)
-    if 'open_time' in fields and isinstance(fields['open_time'], (dict, list)):
-        fields['open_time'] = json.dumps(fields['open_time'], ensure_ascii=False)
+    open_time_changed = 'openTime' in data or 'open_time' in fields
+    if open_time_changed:
+        try:
+            open_time = _validated_admin_open_time(
+                data.get('openTime', fields.get('open_time'))
+            )
+        except OpenTimeValidationError as exc:
+            return _open_time_error(exc)
+        fields['open_time'] = json.dumps(open_time, ensure_ascii=False)
     fields['updated_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     sets   = ', '.join(f"{k}=?" for k in fields)
     params = list(fields.values()) + [market_id]
     conn   = get_db()
     conn.execute(f"UPDATE markets SET {sets} WHERE id=?", params)
+    if open_time_changed:
+        conn.execute("""
+            UPDATE data_review_queue
+            SET status='resolved', updated_at=datetime('now','localtime')
+            WHERE entity_type='market' AND entity_id=?
+              AND issue_type='open_time_v2' AND status='pending'
+        """, (market_id,))
     conn.commit()
     conn.close()
     _log('update_market', f'market:{market_id}')
     return jsonify({'message': '已更新'})
+
+
+@app.route('/api/admin/open-time/validate', methods=['POST'])
+@admin_required
+def admin_validate_open_time():
+    data = request.get_json(force=True) or {}
+    try:
+        value = _validated_admin_open_time(data.get('open_time'))
+    except OpenTimeValidationError as exc:
+        return _open_time_error(exc)
+    return ok(value)
 
 
 @app.route('/api/admin/markets/<market_id>', methods=['DELETE'])
@@ -4021,41 +4177,76 @@ def admin_reviews():
     for r in rows:
         d = dict(r)
         d['images'] = json.loads(d.get('images') or '[]')
+        d['videos'] = json.loads(d.get('videos') or '[]')
         d['tags']   = json.loads(d.get('tags')   or '[]')
         result.append(d)
     return ok({'list': result, 'total': total})
 
 
+def _recalculate_market_rating(conn, market_id):
+    row = conn.execute("""
+        SELECT AVG(rating) AS average, COUNT(*) AS total
+        FROM reviews WHERE market_id=? AND status='approved'
+    """, (market_id,)).fetchone()
+    total = row['total'] or 0
+    average = round(row['average'], 1) if total else None
+    conn.execute(
+        "UPDATE markets SET rating=?, review_count=? WHERE id=?",
+        (average, total, market_id),
+    )
+
+
 @app.route('/api/admin/reviews/<int:rid>/approve', methods=['POST'])
 @admin_required
 def approve_review(rid):
+    data = request.get_json(silent=True) or {}
     conn = get_db()
     r    = conn.execute("SELECT * FROM reviews WHERE id=?", (rid,)).fetchone()
     if not r:
         conn.close()
         return err('未找到', 404)
-    conn.execute("UPDATE reviews SET status='approved' WHERE id=?", (rid,))
-    # 重新计算评分
+    conn.execute("""
+        UPDATE reviews
+        SET status='approved', audit_reason=?, audited_by=?,
+            audited_at=datetime('now','localtime')
+        WHERE id=?
+    """, (
+        str(data.get('reason') or '').strip(),
+        request.current_user.get('id', 0),
+        rid,
+    ))
     market_id = r['market_id']
-    approved  = conn.execute(
-        "SELECT rating FROM reviews WHERE market_id=? AND status='approved'",
-        (market_id,)).fetchall()
-    if approved:
-        avg = sum(x['rating'] for x in approved) / len(approved)
-        conn.execute("UPDATE markets SET rating=?, review_count=? WHERE id=?",
-                     (round(avg, 1), len(approved), market_id))
+    _recalculate_market_rating(conn, market_id)
     conn.commit()
     conn.close()
+    log_action(request.current_user.get('id', 0), 'approve_review', f'review:{rid}')
     return ok()
 
 
 @app.route('/api/admin/reviews/<int:rid>/reject', methods=['POST'])
 @admin_required
 def reject_review(rid):
+    data = request.get_json(silent=True) or {}
+    reason = str(data.get('reason') or '').strip()
+    if not reason:
+        return err('拒绝点评必须填写原因', 400)
     conn = get_db()
-    conn.execute("UPDATE reviews SET status='rejected' WHERE id=?", (rid,))
+    row = conn.execute("SELECT market_id FROM reviews WHERE id=?", (rid,)).fetchone()
+    if not row:
+        conn.close()
+        return err('未找到', 404)
+    conn.execute("""
+        UPDATE reviews
+        SET status='rejected', audit_reason=?, audited_by=?,
+            audited_at=datetime('now','localtime')
+        WHERE id=?
+    """, (reason, request.current_user.get('id', 0), rid))
+    _recalculate_market_rating(conn, row['market_id'])
     conn.commit()
     conn.close()
+    log_action(
+        request.current_user.get('id', 0), 'reject_review', f'review:{rid}', reason
+    )
     return ok()
 
 
@@ -4314,6 +4505,79 @@ def admin_update_feedback(fb_id):
 # 管理端：提醒列表（供推送使用）
 # ════════════════════════════════════════════════════════════
 
+_REMINDER_TIMEZONE = ZoneInfo('Asia/Shanghai')
+
+
+def _parse_reminder_at(raw=None):
+    if not raw:
+        return datetime.now(_REMINDER_TIMEZONE)
+    value = datetime.fromisoformat(str(raw).replace('Z', '+00:00'))
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=_REMINDER_TIMEZONE)
+    return value.astimezone(_REMINDER_TIMEZONE)
+
+
+def _reminder_slot(at):
+    if at.hour == 20:
+        return 'evening', at.date() + timedelta(days=1), at.replace(
+            hour=20, minute=0, second=0, microsecond=0
+        )
+    if at.hour == 6 and at.minute >= 30:
+        return 'morning', at.date(), at.replace(
+            hour=6, minute=30, second=0, microsecond=0
+        )
+    return None, None, None
+
+
+def _build_reminder_tasks(conn, at):
+    slot, open_date, scheduled_at = _reminder_slot(at)
+    stats = {
+        'slot': slot,
+        'open_date': open_date.isoformat() if open_date else None,
+        'created': 0,
+        'already_exists': 0,
+        'skipped_daily': 0,
+        'skipped_needs_review': 0,
+        'skipped_not_open': 0,
+    }
+    if not slot:
+        return stats
+
+    flag_column = 'remind_evening' if slot == 'evening' else 'remind_morning'
+    rows = conn.execute(f"""
+        SELECT r.id, r.user_id, r.market_id, m.open_time
+        FROM market_reminders r
+        JOIN markets m ON m.id=r.market_id
+        WHERE r.status='active' AND r.{flag_column}=1 AND m.status='published'
+    """).fetchall()
+    for row in rows:
+        try:
+            value = validate_open_time(json.loads(row['open_time'] or '{}'))
+            if value['migration_status'] == 'needs_review':
+                raise OpenTimeValidationError(['needs_review'])
+        except (OpenTimeValidationError, TypeError, ValueError, json.JSONDecodeError):
+            stats['skipped_needs_review'] += 1
+            continue
+        if value['type'] == 'daily':
+            stats['skipped_daily'] += 1
+            continue
+        if not is_open_on_date(value, open_date):
+            stats['skipped_not_open'] += 1
+            continue
+        cursor = conn.execute("""
+            INSERT OR IGNORE INTO reminder_deliveries(
+                reminder_id,user_id,market_id,open_date,slot,scheduled_at
+            ) VALUES(?,?,?,?,?,?)
+        """, (
+            row['id'], row['user_id'], row['market_id'], open_date.isoformat(),
+            slot, scheduled_at.isoformat(),
+        ))
+        if cursor.rowcount:
+            stats['created'] += 1
+        else:
+            stats['already_exists'] += 1
+    return stats
+
 @app.route('/api/admin/reminders', methods=['GET'])
 @admin_required
 def admin_get_reminders():
@@ -4321,7 +4585,8 @@ def admin_get_reminders():
     conn  = get_db()
     remind_type = request.args.get('remind_type', '')  # 'once'/'recurring'/''
     sql = """
-        SELECT r.id, r.remind_type, r.status, r.created_at, r.updated_at,
+        SELECT r.id, r.remind_type, r.remind_evening, r.remind_morning,
+               r.status, r.created_at, r.updated_at,
                u.id AS user_id, u.nickname, u.phone, u.wx_openid, u.mp_openid,
                m.id AS market_id, m.name AS market_name, m.category,
                m.region, m.open_time
@@ -4336,7 +4601,79 @@ def admin_get_reminders():
     sql += " ORDER BY r.created_at DESC"
     rows = conn.execute(sql, params).fetchall()
     conn.close()
-    return ok({'list': [dict(r) for r in rows], 'total': len(rows)})
+    items = []
+    for row in rows:
+        item = dict(row)
+        item['remind_evening'] = bool(item['remind_evening'])
+        item['remind_morning'] = bool(item['remind_morning'])
+        items.append(item)
+    return ok({'list': items, 'total': len(items)})
+
+
+@app.route('/api/admin/reminders/build-tasks', methods=['POST'])
+@admin_required
+def admin_build_reminder_tasks():
+    data = request.get_json(silent=True) or {}
+    try:
+        at = _parse_reminder_at(data.get('at'))
+    except (TypeError, ValueError):
+        return err('at 必须是 ISO-8601 时间', 400)
+    conn = get_db()
+    stats = _build_reminder_tasks(conn, at)
+    conn.commit()
+    conn.close()
+    return ok(stats)
+
+
+@app.route('/api/admin/reminder-tasks', methods=['GET'])
+@admin_required
+def admin_get_reminder_tasks():
+    status = request.args.get('status', 'pending')
+    if status not in {'pending', 'sent', 'failed'}:
+        return err('status 不支持', 400)
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT d.*, m.name AS market_name, m.region,
+               u.nickname, u.phone, u.wx_openid, u.mp_openid
+        FROM reminder_deliveries d
+        JOIN markets m ON m.id=d.market_id
+        JOIN users u ON u.id=d.user_id
+        WHERE d.status=?
+        ORDER BY d.scheduled_at, d.id
+    """, (status,)).fetchall()
+    conn.close()
+    return ok({'list': [dict(row) for row in rows], 'total': len(rows)})
+
+
+@app.route('/api/admin/reminder-tasks/<int:task_id>/mark-sent', methods=['POST'])
+@admin_required
+def admin_mark_reminder_task_sent(task_id):
+    conn = get_db()
+    task = conn.execute(
+        "SELECT * FROM reminder_deliveries WHERE id=?", (task_id,)
+    ).fetchone()
+    if not task:
+        conn.close()
+        return err('提醒任务不存在', 404)
+    conn.execute("""
+        UPDATE reminder_deliveries
+        SET status='sent', sent_at=datetime('now','localtime'), error=''
+        WHERE id=?
+    """, (task_id,))
+    reminder = conn.execute(
+        "SELECT remind_type, remind_morning FROM market_reminders WHERE id=?",
+        (task['reminder_id'],),
+    ).fetchone()
+    if (reminder and reminder['remind_type'] == 'once'
+            and (task['slot'] == 'morning' or not reminder['remind_morning'])):
+        conn.execute("""
+            UPDATE market_reminders
+            SET status='triggered', updated_at=datetime('now','localtime')
+            WHERE id=?
+        """, (task['reminder_id'],))
+    conn.commit()
+    conn.close()
+    return ok({'done': True})
 
 
 @app.route('/api/admin/reminders/<int:rid>/mark-sent', methods=['POST'])
