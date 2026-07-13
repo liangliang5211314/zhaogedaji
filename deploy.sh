@@ -175,6 +175,35 @@ if [ -n "$MARKET_SOURCE_DB" ]; then
     else
         echo "仅生成集市差异，未写入；确认后设置 APPLY_MARKET_SYNC=1 再部署。"
     fi
+
+    if "$PY" - "$MARKET_SOURCE_DB" <<'PY'
+import sqlite3
+import sys
+conn = sqlite3.connect(f"file:{sys.argv[1]}?mode=ro", uri=True)
+try:
+    exists = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='data_review_queue'"
+    ).fetchone()
+finally:
+    conn.close()
+raise SystemExit(0 if exists else 1)
+PY
+    then
+        CURRENT_STEP="核对数据复核队列差异"
+        "$PY" tools/sync_data_review_queue.py \
+            --source "$MARKET_SOURCE_DB" \
+            --target "$DB_PATH" \
+            --report-dir "$BACKUP_DIR/review-queue-preview"
+        if [ "$APPLY_MARKET_SYNC" = "1" ]; then
+            CURRENT_STEP="补齐数据复核队列"
+            "$PY" tools/sync_data_review_queue.py \
+                --source "$MARKET_SOURCE_DB" \
+                --target "$DB_PATH" \
+                --report-dir "$BACKUP_DIR/review-queue-applied" \
+                --backup-dir "$BACKUP_DIR/review-queue-backups" \
+                --apply
+        fi
+    fi
 fi
 
 CURRENT_STEP="准备运行目录"
