@@ -619,7 +619,6 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:var(--paper-warm);}
 .today-banner-arrow{font-size:20px;color:rgba(255,255,255,.5);}
 
 /* ── 金刚区 ─────────────────────────────────────── */
-.diamond-section{background:#fff;margin:10px 14px 0;border-radius:16px;padding:16px 8px 10px;box-shadow:0 2px 12px rgba(26,18,8,.06);}
 .diamond-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;}
 .diamond-big{grid-column:span 2;display:flex;flex-direction:column;align-items:center;gap:8px;padding:0 8px 14px;cursor:pointer;transition:transform .15s;}
 .diamond-big:active{transform:scale(.95);}
@@ -638,7 +637,6 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:var(--paper-warm);}
 .quick-chip.active{background:rgba(200,57,43,.1);color:#E8703A;border-color:#E8703A;font-weight:700;}
 
 /* ── 双列集市卡片 ────────────────────────────────── */
-.market-grid{padding:0 14px;display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .mgrid-card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(26,18,8,.07);cursor:pointer;transition:transform .15s;}
 .mgrid-card:active{transform:scale(.97);}
 .mgrid-thumb{height:96px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
@@ -2495,186 +2493,6 @@ body:not(.account-v2-active) .home-v2-nav .bottom-nav-item.active .material-symb
 
 
 
-<!-- 新手引导页 -->
-
-<div id="onboarding-screen" class="screen" style="background:linear-gradient(160deg,#fff8f0 0%,#fff 60%);overflow-y:auto;">
-
-  <div style="max-width:480px;margin:0 auto;padding:40px 24px 32px;">
-
-    <!-- 顶部品牌 -->
-
-    <div style="text-align:center;margin-bottom:32px;">
-
-      <div style="font-size:48px;margin-bottom:8px;">🏮</div>
-
-      <div style="font-size:26px;font-weight:800;color:#E8703A;font-family:'Noto Serif SC',serif;">找个大集</div>
-
-      <div style="font-size:13px;color:#999;margin-top:6px;">欢迎加入！花1分钟完善资料，发现更多好集市</div>
-
-    </div>
-
-
-
-    <!-- 头像选择 -->
-
-    <div style="margin-bottom:24px;">
-
-      <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:10px;">选个头像</div>
-
-      <div style="display:flex;gap:10px;flex-wrap:wrap;" id="ob-avatar-list">
-
-        <!-- 动态生成 -->
-
-      </div>
-
-    </div>
-
-
-
-    <!-- 昵称 -->
-
-    <div style="margin-bottom:20px;">
-
-      <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:8px;">昵称 <span style="color:#E8703A;">*</span></div>
-
-      <input id="ob-nickname" type="text" maxlength="16" placeholder="给自己起个好听的名字"
-
-        style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #eee;border-radius:12px;
-
-               font-size:15px;font-family:'Noto Sans SC',sans-serif;outline:none;background:#fafafa;"
-
-        oninput="document.getElementById('ob-nick-count').textContent=this.value.length">
-
-      <div style="text-align:right;font-size:11px;color:#bbb;margin-top:4px;"><span id="ob-nick-count">0</span>/16</div>
-
-    </div>
-
-
-
-    <!-- 性别 -->
-
-    <div style="margin-bottom:20px;">
-
-      <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:8px;">性别</div>
-
-      <div style="display:flex;gap:10px;">
-
-        <button class="ob-gender-btn" data-v="male"   onclick="selectObGender(this)" style="flex:1;padding:10px;border:1.5px solid #eee;border-radius:10px;background:#fafafa;font-size:14px;cursor:pointer;font-family:inherit;">👦 男</button>
-
-        <button class="ob-gender-btn" data-v="female" onclick="selectObGender(this)" style="flex:1;padding:10px;border:1.5px solid #eee;border-radius:10px;background:#fafafa;font-size:14px;cursor:pointer;font-family:inherit;">👧 女</button>
-
-        <button class="ob-gender-btn" data-v="secret" onclick="selectObGender(this)" style="flex:1;padding:10px;border:1.5px solid #eee;border-radius:10px;background:#fafafa;font-size:14px;cursor:pointer;font-family:inherit;">🤫 保密</button>
-
-      </div>
-
-    </div>
-
-
-
-    <!-- 出生年代 -->
-
-    <div style="margin-bottom:20px;">
-
-      <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:8px;">你是哪个年代的？</div>
-
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-
-        <button class="ob-year-btn" data-v="70后" onclick="selectObYear(this)" style="padding:8px 14px;border:1.5px solid #eee;border-radius:20px;background:#fafafa;font-size:13px;cursor:pointer;font-family:inherit;">70后</button>
-
-        <button class="ob-year-btn" data-v="80后" onclick="selectObYear(this)" style="padding:8px 14px;border:1.5px solid #eee;border-radius:20px;background:#fafafa;font-size:13px;cursor:pointer;font-family:inherit;">80后</button>
-
-        <button class="ob-year-btn" data-v="90后" onclick="selectObYear(this)" style="padding:8px 14px;border:1.5px solid #eee;border-radius:20px;background:#fafafa;font-size:13px;cursor:pointer;font-family:inherit;">90后</button>
-
-        <button class="ob-year-btn" data-v="95后" onclick="selectObYear(this)" style="padding:8px 14px;border:1.5px solid #eee;border-radius:20px;background:#fafafa;font-size:13px;cursor:pointer;font-family:inherit;">95后</button>
-
-        <button class="ob-year-btn" data-v="00后" onclick="selectObYear(this)" style="padding:8px 14px;border:1.5px solid #eee;border-radius:20px;background:#fafafa;font-size:13px;cursor:pointer;font-family:inherit;">00后</button>
-
-        <button class="ob-year-btn" data-v="05后" onclick="selectObYear(this)" style="padding:8px 14px;border:1.5px solid #eee;border-radius:20px;background:#fafafa;font-size:13px;cursor:pointer;font-family:inherit;">05后</button>
-
-      </div>
-
-    </div>
-
-
-
-    <!-- 感兴趣的集市类型 -->
-
-    <div style="margin-bottom:20px;">
-
-      <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:4px;">喜欢逛哪类集市？<span style="font-size:11px;color:#999;font-weight:400;">（可多选）</span></div>
-
-      <div style="font-size:12px;color:#aaa;margin-bottom:10px;">选择后我们会为你推荐更多感兴趣的集市</div>
-
-      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="ob-interests-list">
-
-        <button class="ob-interest-btn" data-v="早市" onclick="toggleObInterest(this)" style="padding:10px 14px;border:1.5px solid #eee;border-radius:12px;background:#fafafa;font-size:13px;cursor:pointer;font-family:inherit;">🌅 早市</button>
-
-        <button class="ob-interest-btn" data-v="集市" onclick="toggleObInterest(this)" style="padding:10px 14px;border:1.5px solid #eee;border-radius:12px;background:#fafafa;font-size:13px;cursor:pointer;font-family:inherit;">🏮 集市</button>
-
-        <button class="ob-interest-btn" data-v="夜市" onclick="toggleObInterest(this)" style="padding:10px 14px;border:1.5px solid #eee;border-radius:12px;background:#fafafa;font-size:13px;cursor:pointer;font-family:inherit;">🌙 夜市</button>
-
-        <button class="ob-interest-btn" data-v="农贸市场" onclick="toggleObInterest(this)" style="padding:10px 14px;border:1.5px solid #eee;border-radius:12px;background:#fafafa;font-size:13px;cursor:pointer;font-family:inherit;">🌾 农贸</button>
-
-        <button class="ob-interest-btn" data-v="宠物市场" onclick="toggleObInterest(this)" style="padding:10px 14px;border:1.5px solid #eee;border-radius:12px;background:#fafafa;font-size:13px;cursor:pointer;font-family:inherit;">🐾 宠物</button>
-
-        <button class="ob-interest-btn" data-v="古玩市场" onclick="toggleObInterest(this)" style="padding:10px 14px;border:1.5px solid #eee;border-radius:12px;background:#fafafa;font-size:13px;cursor:pointer;font-family:inherit;">🏺 古玩</button>
-
-        <button class="ob-interest-btn" data-v="花鸟市场" onclick="toggleObInterest(this)" style="padding:10px 14px;border:1.5px solid #eee;border-radius:12px;background:#fafafa;font-size:13px;cursor:pointer;font-family:inherit;">🌸 花鸟</button>
-
-        <button class="ob-interest-btn" data-v="二手集市" onclick="toggleObInterest(this)" style="padding:10px 14px;border:1.5px solid #eee;border-radius:12px;background:#fafafa;font-size:13px;cursor:pointer;font-family:inherit;">♻️ 二手</button>
-
-        <button class="ob-interest-btn" data-v="美食集市" onclick="toggleObInterest(this)" style="padding:10px 14px;border:1.5px solid #eee;border-radius:12px;background:#fafafa;font-size:13px;cursor:pointer;font-family:inherit;">🍜 美食</button>
-
-        <button class="ob-interest-btn" data-v="跳蚤市场" onclick="toggleObInterest(this)" style="padding:10px 14px;border:1.5px solid #eee;border-radius:12px;background:#fafafa;font-size:13px;cursor:pointer;font-family:inherit;">🎪 跳蚤</button>
-
-      </div>
-
-    </div>
-
-
-
-    <!-- 常驻城市 -->
-
-    <div style="margin-bottom:32px;">
-
-      <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:8px;">常驻城市 <span style="font-size:11px;color:#999;font-weight:400;">（可选）</span></div>
-
-      <input id="ob-city" type="text" placeholder="如：北京、上海、成都..." maxlength="20"
-
-        style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #eee;border-radius:12px;
-
-               font-size:14px;font-family:'Noto Sans SC',sans-serif;outline:none;background:#fafafa;">
-
-    </div>
-
-
-
-    <!-- 提交按钮 -->
-
-    <button onclick="submitOnboarding()"
-
-      style="width:100%;padding:15px;background:linear-gradient(135deg,#E8703A,#E86040);color:white;border:none;
-
-             border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;font-family:'Noto Sans SC',sans-serif;
-
-             box-shadow:0 4px 16px rgba(200,57,43,.3);">
-
-      马上找集市 🏮
-
-    </button>
-
-    <div style="text-align:center;margin-top:14px;">
-
-      <span onclick="skipOnboarding()" style="font-size:12px;color:#bbb;cursor:pointer;text-decoration:underline;">跳过，稍后再填</span>
-
-    </div>
-
-  </div>
-
-</div>
-
-
-
 <!-- USER APP -->
 
 <div id="user-screen" class="screen">
@@ -4276,150 +4094,6 @@ body:not(.account-v2-active) .home-v2-nav .bottom-nav-item.active .material-symb
   <section class="trigger-v2-sheet navigation" role="dialog" aria-modal="true" aria-labelledby="navigation-trigger-title"><div class="trigger-v2-sheet-inner"><div class="trigger-v2-handle"></div><button class="trigger-v2-close" type="button" onclick="closeTriggerV2('navigation-trigger-v2')" aria-label="关闭"><span class="material-symbols-outlined" aria-hidden="true">close</span></button><h2 class="trigger-v2-title" id="navigation-trigger-title">选择地图应用</h2><p class="trigger-v2-copy">首次选择后记住偏好，下次可直接打开。</p><div class="trigger-v2-map-list" id="trigger-v2-map-list"></div><div class="trigger-v2-remember"><span>记住本次选择</span><button class="trigger-v2-switch" id="trigger-v2-remember" type="button" aria-label="记住地图选择已开启"></button></div><button class="trigger-v2-primary" id="trigger-v2-nav-button" type="button" style="margin-top:16px" onclick="confirmNavigationV2()">用高德地图导航</button><p class="trigger-v2-nav-help">可在“我的 &gt; 设置 &gt; 默认地图”中修改</p></div></section>
 </div>
 
-<!-- LOCATION MODAL (legacy fallback; 新入口已切换为轻量地区页) -->
-
-<div class="modal-overlay" id="location-modal" onclick="if(event.target===this)cancelLocationModal()">
-
-  <div class="modal" style="max-height:88vh;overflow-y:hidden;display:flex;flex-direction:column;">
-
-    <div class="modal-handle" onclick="cancelLocationModal()"></div>
-
-    <div class="modal-header" style="flex-shrink:0;">
-
-      <button onclick="cancelLocationModal()" style="border:none;background:none;color:var(--gray);font-size:14px;cursor:pointer;padding:4px 0;font-family:'Noto Sans SC',sans-serif;">取消</button>
-
-      <div class="modal-title">📍 选择地区</div>
-
-      <button onclick="applyAndClose()" style="border:none;background:none;color:var(--red);font-size:14px;font-weight:700;cursor:pointer;padding:4px 0;font-family:'Noto Sans SC',sans-serif;">确定</button>
-
-    </div>
-
-
-
-    <!-- GPS 定位按钮 -->
-
-    <div style="padding:0 14px 10px;flex-shrink:0;">
-
-      <button onclick="applyAndClose();doLocate();" style="width:100%;padding:10px;background:linear-gradient(135deg,#1A3A7A,#2B5BA8);color:white;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Noto Sans SC',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;">
-
-        📡 GPS定位 · 自动识别当前城市
-
-      </button>
-
-    </div>
-
-
-
-    <!-- 搜索框 -->
-
-    <div style="padding:0 14px 10px;position:relative;flex-shrink:0;">
-
-      <div style="display:flex;align-items:center;gap:8px;background:var(--white);border:1.5px solid var(--paper-dark);border-radius:9px;padding:8px 12px;">
-
-        <span>🔍</span>
-
-        <input type="text" id="addr-search-input" placeholder="搜索省、市、区..." oninput="searchAddr3(this.value)"
-
-          style="border:none;background:transparent;font-size:16px;color:var(--ink);outline:none;flex:1;font-family:'Noto Sans SC',sans-serif;">
-
-        <button onclick="document.getElementById('addr-search-input').value='';searchAddr3('');" style="border:none;background:none;color:var(--gray);cursor:pointer;font-size:13px;padding:0;">✕</button>
-
-      </div>
-
-      <!-- 搜索结果下拉 -->
-
-      <div id="addr-search-drop" style="display:none;position:absolute;left:14px;right:14px;top:calc(100% - 6px);background:var(--white);border:1.5px solid var(--paper-dark);border-top:none;border-radius:0 0 10px 10px;max-height:200px;overflow-y:auto;z-index:20;box-shadow:0 8px 24px rgba(0,0,0,.12);"></div>
-
-    </div>
-
-
-
-    <!-- 热门城市 -->
-
-    <div style="padding:0 14px 8px;flex-shrink:0;">
-
-      <div style="font-size:11px;color:var(--gray);margin-bottom:7px;font-weight:600;letter-spacing:.5px;">🔥 热门城市</div>
-
-      <div style="display:flex;gap:6px;flex-wrap:wrap;" id="addr-hot-cities"></div>
-
-    </div>
-
-
-
-    <!-- 三列表头 -->
-
-    <div class="addr-3col-headers" style="flex-shrink:0;">
-
-      <div class="addr-3col-hdr" id="hdr-province">省份</div>
-
-      <div class="addr-3col-hdr" id="hdr-city">城市</div>
-
-      <div class="addr-3col-hdr" id="hdr-district">区/县</div>
-
-    </div>
-
-
-
-    <!-- 三列选择区 -->
-
-    <div class="addr-3col">
-
-      <div id="col-province" class="addr-col"></div>
-
-      <div id="col-city" class="addr-col"></div>
-
-      <div id="col-district" class="addr-col"></div>
-
-    </div>
-
-
-
-    <!-- 街道/镇/村（可选，选完区县后出现） -->
-
-    <div id="township-row" style="display:none;padding:8px 14px 6px;flex-shrink:0;border-top:1px solid var(--paper-dark);background:var(--paper-warm);">
-
-      <div style="font-size:11px;color:var(--gray);margin-bottom:6px;font-weight:600;">🏘️ 街道/镇/村（可选）</div>
-
-      <div style="position:relative;">
-
-        <input type="text" id="township-input" placeholder="输入街道、镇、村名称搜索..." autocomplete="off"
-
-          oninput="searchTownship(this.value)"
-
-          style="width:100%;padding:8px 30px 8px 10px;border:1.5px solid var(--paper-dark);border-radius:8px;font-size:13px;font-family:'Noto Sans SC',sans-serif;box-sizing:border-box;outline:none;background:var(--white);">
-
-        <button onclick="clearTownship()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--gray);cursor:pointer;font-size:13px;padding:0;">✕</button>
-
-        <div id="township-drop" style="display:none;position:absolute;left:0;right:0;bottom:calc(100% + 4px);background:var(--white);border:1.5px solid var(--paper-dark);border-radius:8px;max-height:160px;overflow-y:auto;z-index:20;box-shadow:0 -6px 20px rgba(0,0,0,.12);"></div>
-
-      </div>
-
-    </div>
-
-
-
-    <!-- 已选预览 + 确认按钮 -->
-
-    <div style="padding:10px 14px 24px;flex-shrink:0;border-top:1px solid var(--paper-dark);">
-
-      <div id="addr-preview-3col" style="font-size:12px;color:var(--gray);margin-bottom:8px;text-align:center;min-height:18px;"></div>
-
-      <div style="display:flex;gap:8px;">
-
-        <button onclick="resetToLevel();applyAndClose();" style="flex:0 0 auto;padding:13px 18px;background:var(--paper-dark);color:var(--gray);border:none;border-radius:11px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Noto Sans SC',sans-serif;">清除</button>
-
-        <button onclick="applyAndClose()" style="flex:1;padding:13px;background:var(--red);color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Noto Sans SC',sans-serif;letter-spacing:2px;">确 定</button>
-
-      </div>
-
-    </div>
-
-  </div>
-
-</div>
-
-
-
 <!-- REVIEW MODAL -->
 
 <div class="modal-overlay center" id="review-modal" onclick="if(event.target===this)closeModal('review-modal')">
@@ -5561,8 +5235,6 @@ function showScreen(id) {
   if (!el) { console.error('[showScreen] 找不到元素:', id); return; }
 
   el.classList.add('active');
-
-  if (id === 'onboarding-screen') _initOnboarding();
 
 }
 
@@ -7638,13 +7310,17 @@ function _updateCategoryList(cats) {
   let previousUserPageV2 = 'home';
   let selectedMapProviderV2 = 'amap';
   let navigationSettingOnlyV2 = false;
+  let regionSelectionTargetV2 = 'home';
 
-  window.openRegionSearchV2 = function(){
+  window.openRegionSearchV2 = function(target='home'){
+    regionSelectionTargetV2 = target;
     previousUserPageV2 = _getActivePage();
     document.body.classList.add('region-v2-active');
     document.querySelectorAll('[id^="user-page-"]').forEach(page => page.classList.add('hidden'));
     document.getElementById('user-page-region-v2')?.classList.remove('hidden');
-    const current = document.getElementById('loc-name-display')?.textContent || '临沂市 · 兰山区';
+    const current = target === 'publish'
+      ? document.getElementById('pub-region-text')?.textContent || '请选择区县'
+      : document.getElementById('loc-name-display')?.textContent || '临沂市 · 兰山区';
     setText('region-v2-current-name',current.replace(/市(?=[^·])/,'市 · '));
     document.querySelector('.user-scroll-body')?.scrollTo?.({top:0});
   };
@@ -7663,6 +7339,15 @@ function _updateCategoryList(cats) {
 
   window.selectRegionV2 = function(label){
     const clean = String(label).replace(/\s*·\s*/g,'·');
+    if (regionSelectionTargetV2 === 'publish') {
+      const value = document.getElementById('pub-region-value');
+      const text = document.getElementById('pub-region-text');
+      if (value) value.value = clean;
+      if (text) { text.textContent = clean.replaceAll('·',' · '); text.style.color = 'var(--color-ink)'; }
+      closeRegionSearchV2();
+      showToast(`已选择${label}`);
+      return;
+    }
     selectedRegion = clean.split('·').pop() || clean;
     const display = document.getElementById('loc-name-display');
     if (display) display.textContent = clean.replaceAll('·','');
@@ -14528,19 +14213,7 @@ function closePubMapPicker() {
 
 function openPubRegionPicker() {
 
-  const modal = document.getElementById('location-modal');
-
-  if (!modal) return;
-
-  addrState = { province: null, city: null, district: null, township: null };
-
-  addrSelected = { level: -1, text: '', short: '' };
-
-  modal._pubMode = true;
-
-  modal.classList.add('open');
-
-  _renderPickerInit();
+  openRegionSearchV2('publish');
 
 }
 
