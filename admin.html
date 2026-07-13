@@ -857,10 +857,10 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;}
             <thead><tr>
               <th width="36"><input type="checkbox" id="market-check-all" onchange="toggleSelectAllMarkets(this)" title="全选"></th>
               <th width="48" style="text-align:center;">#</th>
-              <th>集市名称</th><th>分类</th><th>地区</th><th>开集时间</th><th>评分</th><th>状态</th><th>操作</th>
+              <th>集市名称</th><th>分类</th><th>地区</th><th>开集时间</th><th>规模</th><th>评分</th><th>状态</th><th>操作</th>
             </tr></thead>
             <tbody id="markets-admin-tbody">
-              <tr><td colspan="9" style="text-align:center;color:var(--gray);padding:24px;">加载中...</td></tr>
+              <tr><td colspan="10" style="text-align:center;color:var(--gray);padding:24px;">加载中...</td></tr>
             </tbody>
           </table></div></div>
           <div class="pagination" id="market-pagination" style="margin-top:12px;"></div>
@@ -5190,7 +5190,7 @@ function saveAppSettings() {
 // ─────────────────────────────────────────────
 async function openMarketEditModal(idx) {
   const m = idx < 0
-    ? {id:Date.now(),name:'',cat:'早市',icon:'🌅',bg:'linear-gradient(135deg,#FFF4E0,#FFE0A0)',region:'',addr:'',time:'',rating:5.0,dist:0,tags:[],schedule:'daily',phone:'',desc:''}
+    ? {id:Date.now(),name:'',cat:'早市',icon:'🌅',bg:'linear-gradient(135deg,#FFF4E0,#FFE0A0)',region:'',addr:'',time:'',scale:'',rating:5.0,dist:0,tags:[],schedule:'daily',phone:'',desc:''}
     : {...MARKETS[idx]};
   // 从API获取最新分类列表
   let catOptions = ['早市','集市','夜市','农贸市场','宠物市场','古玩市场']; // 默认兜底
@@ -5215,6 +5215,12 @@ async function openMarketEditModal(idx) {
           <div class="cms-form-row"><label class="cms-label">分类 *</label><select class="cms-input" id="medit-cat">${catOptions.map(c=>`<option ${c===m.cat?'selected':''}>${c}</option>`).join('')}</select></div>
           <div class="cms-form-row"><label class="cms-label">评分（1-5）</label><input class="cms-input" id="medit-rating" type="number" min="1" max="5" step="0.1" value="${m.rating}"></div>
         </div>
+        <div class="cms-form-row"><label class="cms-label">规模</label><select class="cms-input" id="medit-scale">
+          <option value="" ${(m.scale||'')===''?'selected':''}>未填写</option>
+          <option value="大" ${(m.scale||'')==='大'?'selected':''}>大</option>
+          <option value="中" ${(m.scale||'')==='中'?'selected':''}>中</option>
+          <option value="小" ${(m.scale||'')==='小'?'selected':''}>小</option>
+        </select></div>
         <div class="cms-form-row"><label class="cms-label">所在城市/地区</label><input class="cms-input" id="medit-region" value="${m.region}" placeholder="如：北京市·朝阳区"></div>
         <div class="cms-form-row">
           <label class="cms-label" style="display:flex;justify-content:space-between;align-items:center;">
@@ -5629,6 +5635,7 @@ async function saveMarketEdit(idx) {
     region: document.getElementById('medit-region')?.value?.trim()||'',
     address: addr,
     openTime,
+    scale: document.getElementById('medit-scale')?.value || '',
     rating: parseFloat(document.getElementById('medit-rating')?.value)||5.0,
     tags: document.getElementById('medit-tags')?.value?.split(',').map(t=>t.trim()).filter(Boolean)||[],
     phone: document.getElementById('medit-phone')?.value?.trim()||'',
@@ -5740,11 +5747,16 @@ let SPIDER_LOGS = [];
 let _poiPage = 1, _poiTotal = 0;
 let _selectedPois = new Map(); // id -> poi object
 
-function saveAmapWsKey() {
+async function saveAmapWsKey() {
   const key = document.getElementById('amap-ws-key')?.value.trim();
   if (!key) { showToast('请输入Key'); return; }
   localStorage.setItem('zjsAmapWsKey', key);
-  showToast('✅ Key已保存');
+  const res = await API.post('/admin/amap-key', { key });
+  if (!res || res.code !== 200) {
+    showToast('本地已保存，服务器保存失败：' + (res?.msg || '请检查网络'));
+    return;
+  }
+  showToast('✅ Key已保存到服务器');
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -10238,7 +10250,7 @@ async function renderMarketsAdmin(page) {
   const resetBtn = document.getElementById('market-region-reset-btn');
   if (resetBtn) resetBtn.style.display = region ? 'inline-block' : 'none';
 
-  if (tbody) tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--gray);">加载中...</td></tr>`;
+  if (tbody) tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--gray);">加载中...</td></tr>`;
 
   const params = new URLSearchParams({ page: _marketAdminPage, per_page: _marketAdminPer });
   if (status) params.set('status', status);
@@ -10249,7 +10261,7 @@ async function renderMarketsAdmin(page) {
   const res = await API.get(`/admin/markets?${params}`);
   if (!tbody) return;
   if (!res || res.code !== 200) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:red;">加载失败，请检查网络</td></tr>`; return;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:red;">加载失败，请检查网络</td></tr>`; return;
   }
 
   const items = res.data || res.markets || [];
@@ -10262,7 +10274,7 @@ async function renderMarketsAdmin(page) {
   _updateBatchToolbar();
 
   if (!items.length) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--gray);">暂无数据</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--gray);">暂无数据</td></tr>`;
     _renderMarketPagination(0);
     return;
   }
@@ -10291,6 +10303,7 @@ async function renderMarketsAdmin(page) {
         ${timeNeedsExpand?`<span style="font-size:10px;color:#7dd3fc;margin-left:3px;">▼</span>`:''}
         <div id="ot-full-${m.id}" style="display:none;color:#374151;word-break:break-all;white-space:pre-wrap;margin-top:2px;">${_esc(timeFull)}</div>
       </td>
+      <td style="font-size:12px;">${m.scale ? _esc(m.scale) : '<span style="color:#bbb;">-</span>'}</td>
       <td style="font-size:12px;">${m.rating ? '⭐ '+m.rating : '<span style="color:#bbb;">无</span>'}</td>
       <td><span style="color:${statusColor[m.status]||'#888'};font-weight:700;font-size:12px;">${statusLabel[m.status]||m.status||'-'}</span></td>
       <td>
@@ -10556,6 +10569,16 @@ async function editMarket(id) {
         </div>
 
         <div class="cms-form-row">
+          <label class="cms-label">规模</label>
+          <select class="cms-input" id="em-scale">
+            <option value="" ${(m.scale||'')===''?'selected':''}>未填写</option>
+            <option value="大" ${(m.scale||'')==='大'?'selected':''}>大</option>
+            <option value="中" ${(m.scale||'')==='中'?'selected':''}>中</option>
+            <option value="小" ${(m.scale||'')==='小'?'selected':''}>小</option>
+          </select>
+        </div>
+
+        <div class="cms-form-row">
           <label class="cms-label">所在地区</label>
           <input class="cms-input" id="em-region" value="${_esc(m.region||'')}" placeholder="如：河北省·保定市·唐县">
         </div>
@@ -10711,6 +10734,7 @@ async function saveEditMarket(id, publish) {
   const payload = {
     name,
     category:    document.getElementById('em-cat')?.value || '',
+    scale:       document.getElementById('em-scale')?.value || '',
     address:     addr || '',
     region:      document.getElementById('em-region')?.value.trim() || '',
     phone:       document.getElementById('em-phone')?.value.trim() || '',
