@@ -1014,14 +1014,18 @@ def get_popular_regions():
             'tag_counts': {},
         })
         group['market_count'] += 1
-        candidates = _parse_tags(row['tags'])
+        candidates = [(tag, False) for tag in _parse_tags(row['tags'])]
         if row['category'] and row['category'] not in generic_tags:
-            candidates.append(row['category'])
-        for tag in candidates:
+            candidates.append((row['category'], True))
+        for tag, is_category in candidates:
             tag = str(tag).strip()
             if (not tag or tag in generic_tags or tag in group_parts or len(tag) > 8
                     or re.search(r'(省|市|区|县|乡|镇|村|街道|社区)$', tag)
-                    or tag in {'360地图POI', '高德POI', '待核实'}):
+                    or tag in {'360地图POI', '高德POI', '待核实'}
+                    or (not is_category and not re.search(
+                        r'土货|特产|庙会|早市|夜市|花卉|古玩|宠物|美食|小吃|二手|民俗|民族|赶场|周末|非遗|农产|果蔬|海鲜|山货|手作',
+                        tag,
+                    ))):
                 continue
             group['tag_counts'][tag] = group['tag_counts'].get(tag, 0) + 1
 
