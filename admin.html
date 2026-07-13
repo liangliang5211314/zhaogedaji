@@ -3232,11 +3232,7 @@ async function pgFetchTownships() {
   try {
     const raw = await fetch('/api/admin/ai/get-townships', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Admin-Key': 'admin_zhaojishi_2024',
-        ...(_adminToken ? {'Authorization': `Bearer ${_adminToken}`} : {})
-      },
+      headers: adminAuthHeaders({'Content-Type': 'application/json'}),
       body: JSON.stringify({ province, city, county })
     });
     const res = await raw.json();
@@ -5200,7 +5196,7 @@ async function openMarketEditModal(idx) {
   let catOptions = ['早市','集市','夜市','农贸市场','宠物市场','古玩市场']; // 默认兜底
   try {
     const catRes = await fetch(API_BASE + '/admin/categories', {
-      headers: { 'X-Admin-Key': 'admin_zhaojishi_2024' }
+      headers: adminAuthHeaders()
     });
     const catData = await catRes.json();
     if (catData.code === 200 && catData.data?.length) {
@@ -5810,8 +5806,7 @@ async function scFetchTownships() {
   try {
     const raw = await fetch('/api/admin/ai/get-townships', {
       method: 'POST',
-      headers: {'Content-Type':'application/json','X-Admin-Key':'admin_zhaojishi_2024',
-                ...(_adminToken?{'Authorization':`Bearer ${_adminToken}`}:{})},
+      headers: adminAuthHeaders({'Content-Type':'application/json'}),
       body: JSON.stringify({province, city, county})
     });
     const res = await raw.json();
@@ -5877,8 +5872,7 @@ async function scStartCollect() {
   try {
     const raw = await fetch('/api/admin/ai/collect-markets', {
       method: 'POST',
-      headers: {'Content-Type':'application/json','X-Admin-Key':'admin_zhaojishi_2024',
-                ...(_adminToken?{'Authorization':`Bearer ${_adminToken}`}:{})},
+      headers: adminAuthHeaders({'Content-Type':'application/json'}),
       body: JSON.stringify({province, city, county, township: '', types, wantCoord, extra})
     });
     const res = await raw.json();
@@ -5923,8 +5917,7 @@ async function testAiKey(provider, keyInputId, modelInputId, btn) {
   try {
     const raw = await fetch('/api/admin/ai/test-key', {
       method: 'POST',
-      headers: {'Content-Type':'application/json','X-Admin-Key':'admin_zhaojishi_2024',
-                ...(_adminToken?{'Authorization':`Bearer ${_adminToken}`}:{})},
+      headers: adminAuthHeaders({'Content-Type':'application/json'}),
       body: JSON.stringify({provider, key, model})
     });
     const res = await raw.json();
@@ -5972,11 +5965,7 @@ async function checkAmapKey() {
   try {
     const raw = await fetch(API_BASE + '/admin/amap-key/check', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Admin-Key': 'admin_zhaojishi_2024',
-        ...(_adminToken ? {'Authorization': `Bearer ${_adminToken}`} : {})
-      },
+      headers: adminAuthHeaders({'Content-Type': 'application/json'}),
       body: JSON.stringify({ key })
     });
     const text = await raw.text();
@@ -7821,8 +7810,7 @@ async function _slFetchLogs(page) {
   listEl.innerHTML = '<div style="padding:30px;text-align:center;color:var(--gray);">加载中…</div>';
   try {
     const raw = await fetch(`/api/admin/ai/collect-logs?page=${_slPage}&limit=15`, {
-      headers: {'X-Admin-Key': 'admin_zhaojishi_2024',
-                ...(_adminToken ? {'Authorization': `Bearer ${_adminToken}`} : {})}
+      headers: adminAuthHeaders()
     });
     const res = await raw.json();
     if (res.code !== 200) { listEl.innerHTML = '<div style="padding:30px;text-align:center;color:var(--gray);">加载失败</div>'; return; }
@@ -8257,7 +8245,7 @@ async function handleGeminiFiles(files) {
     try {
       const res = await fetch(API_BASE + '/admin/gemini/recognize', {
         method: 'POST',
-        headers: { 'X-Admin-Key': getAdminKey() },
+        headers: adminAuthHeaders(),
         body: fd
       }).then(r => r.json());
       if (res?.code === 200) {
@@ -9536,6 +9524,13 @@ const API_BASE = location.protocol === 'file:'
   : '/api';
 let _adminToken = localStorage.getItem('zjsAdminToken') || '';
 
+function adminAuthHeaders(extra={}) {
+  return {
+    ...extra,
+    ...(_adminToken ? {'Authorization': `Bearer ${_adminToken}`} : {})
+  };
+}
+
 async function apiCall(method, path, data=null) {
   const opts = {
     method,
@@ -10513,7 +10508,7 @@ async function editMarket(id) {
   // 加载分类
   let catNames = ['早市','集市','夜市','农贸市场','宠物市场','古玩市场'];
   try {
-    const cr = await fetch(API_BASE + '/admin/categories', { headers: { 'X-Admin-Key': 'admin_zhaojishi_2024' } });
+    const cr = await fetch(API_BASE + '/admin/categories', { headers: adminAuthHeaders() });
     const cd = await cr.json();
     if (cd.code === 200 && cd.data?.length) catNames = cd.data.map(c => c.name);
   } catch(e) {}

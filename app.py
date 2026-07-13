@@ -31,6 +31,10 @@ except ImportError:
     ADMIN_KEY  = os.environ.get('ADMIN_KEY',  'admin_zhaojishi_2024')
     JWT_SECRET = os.environ.get('JWT_SECRET', 'zhaojishi_jwt_2025')
 
+ALLOW_LEGACY_ADMIN_KEY = os.environ.get(
+    'ALLOW_LEGACY_ADMIN_KEY', ''
+).strip().lower() in ('1', 'true', 'yes')
+
 try:
     from log_config import setup_logging
     logger = setup_logging()
@@ -635,9 +639,10 @@ def log_action(user_id, action, target='', detail=''):
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        # 支持旧的 X-Admin-Key 方式（兼容现有后台）
+        # 旧密钥只在测试或显式兼容开关下启用，生产默认使用 JWT。
         old_key = request.headers.get('X-Admin-Key', '')
-        if hmac.compare_digest(old_key, ADMIN_KEY):
+        legacy_allowed = app.testing or ALLOW_LEGACY_ADMIN_KEY
+        if old_key and legacy_allowed and hmac.compare_digest(old_key, ADMIN_KEY):
             request.current_user = {'id': 0, 'role': 'superadmin', 'phone': 'system'}
             return f(*args, **kwargs)
         # 新的 JWT 方式
@@ -654,7 +659,8 @@ def superadmin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         old_key = request.headers.get('X-Admin-Key', '')
-        if hmac.compare_digest(old_key, ADMIN_KEY):
+        legacy_allowed = app.testing or ALLOW_LEGACY_ADMIN_KEY
+        if old_key and legacy_allowed and hmac.compare_digest(old_key, ADMIN_KEY):
             request.current_user = {'id': 0, 'role': 'superadmin', 'phone': 'system'}
             return f(*args, **kwargs)
         user = _get_user_from_token()

@@ -53,6 +53,23 @@ def test_reviewer_can_audit_but_cannot_open_system_settings(role_client):
     assert allowed.status_code == 200
 
 
+def test_legacy_admin_key_is_disabled_outside_testing(tmp_path, monkeypatch):
+    db_path = tmp_path / "legacy-key-disabled.db"
+    monkeypatch.setattr(app_module, "DB_PATH", str(db_path))
+    monkeypatch.setattr(app_module, "ALLOW_LEGACY_ADMIN_KEY", False)
+    app_module.init_db()
+    previous_testing = app_module.app.testing
+    app_module.app.config.update(TESTING=False)
+    try:
+        response = app_module.app.test_client().get(
+            "/api/admin/markets",
+            headers={"X-Admin-Key": app_module.ADMIN_KEY},
+        )
+    finally:
+        app_module.app.config.update(TESTING=previous_testing)
+    assert response.status_code == 403
+
+
 def test_reviewer_cannot_promote_accounts(role_client):
     client, reviewer_headers, _, reviewer_id = role_client
     response = client.put(
