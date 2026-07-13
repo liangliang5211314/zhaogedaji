@@ -11292,6 +11292,7 @@ async function saveOAuthConfig() {
     const items=payload?.data?.items?.map(x=>({...x,desc:{reviews:'评价含图片/视频，等待最久优先',coordinates:'AI 已筛出问题，人工确认位置',names:'OCR 疑似损坏，保留原文人工判断',open_time:'禁止 AI 猜日期，保留原始文本',feedback:'需要回复或转交处理',clues:'新采集线索等待确认',sellers:'核验身份与经营信息'}[x.key]}))||fallback;
     const total=payload?.data?.total??items.reduce((s,x)=>s+x.count,0);
     const navBadge=document.getElementById('adm2-nav-badge-todo'); if(navBadge) navBadge.textContent=total>999?'999+':total;
+    items.forEach(item=>{ const badge=document.querySelector(`#adm2-review-tabs [data-tab="${item.tab}"] .adm2-tab-badge`); if(badge)badge.textContent=item.count>999?'999+':item.count; });
     document.getElementById('adm2-todo-list').innerHTML=items.map(item=>`<div class="adm2-todo-row" onclick="adm2Go('${item.page}','${item.tab}')"><div class="adm2-todo-icon">${adm2Icon(item.key==='coordinates'?'location_on':item.key==='names'?'spellcheck':item.key==='open_time'?'calendar_month':item.key==='reviews'?'rate_review':item.key==='feedback'?'feedback':item.key==='clues'?'lightbulb':'store')}</div><div class="adm2-todo-copy"><strong>${adm2Esc(item.label)}</strong><span>${adm2Esc(item.desc||'点击进入处理队列')}</span></div><span class="adm2-count">${item.count>999?'999+':item.count}</span>${adm2Icon('chevron_right')}</div>`).join('');
     let stats=adm2Preview?null:await API.get('/admin/stats'); const d=stats?.data||{totalMarkets:3030,totalUsers:268,totalReviews:126,totalRegions:84}; adm2RenderKpis('adm2-kpis',d,total);
   }
