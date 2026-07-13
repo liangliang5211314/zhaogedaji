@@ -2124,6 +2124,13 @@ body.favorites-my-preview #user-screen .user-top-bar{display:none!important;}
 .account-v2-active .home-v2-nav .bottom-nav-item.active::before{content:'';position:absolute;z-index:-1;width:78px;height:56px;left:50%;top:1px;transform:translateX(-50%);border-radius:18px;background:#FFF0E8;}
 body:not(.account-v2-active) .home-v2-nav .bottom-nav-item.active .material-symbols-outlined{font-variation-settings:'FILL' 0;}
 
+/* APP V2 · 无网络与操作反馈 */
+#user-screen .user-scroll-body{position:relative;}
+.network-v2-state{position:absolute;inset:0;z-index:450;display:none;align-items:center;justify-content:center;padding:24px 16px 48px;background:var(--color-paper);}.network-v2-state.open{display:flex;}
+.network-v2-card{width:100%;padding:32px 22px 24px;border-radius:20px;background:#fff;box-shadow:var(--shadow-card);text-align:center;}.network-v2-icon{width:84px;height:84px;margin:0 auto;border-radius:26px;background:#F4EBD8;color:#9A6A1D;display:flex;align-items:center;justify-content:center;}.network-v2-icon .material-symbols-outlined{font-size:38px;}.network-v2-card h2{margin-top:18px;font:700 21px/30px 'Noto Serif SC','Songti SC',serif;}.network-v2-card p{margin:8px auto 0;max-width:270px;color:#737A73;font-size:14px;line-height:22px;}.network-v2-primary{width:100%;height:50px;margin-top:22px;border:0;border-radius:15px;background:var(--color-brand);color:#fff;font:600 16px/24px 'Noto Sans SC',sans-serif;cursor:pointer;}.network-v2-secondary{width:100%;height:46px;margin-top:4px;border:0;background:transparent;color:var(--color-pine);font:500 14px/20px 'Noto Sans SC',sans-serif;cursor:pointer;}
+.network-v2-primary:focus-visible,.network-v2-secondary:focus-visible{outline:2px solid var(--color-brand);outline-offset:2px;}
+.toast{min-height:44px;max-width:calc(100vw - 32px);padding:8px 16px;display:flex;align-items:center;gap:8px;border-radius:22px;background:var(--color-ink);font:500 13px/19px 'Noto Sans SC',sans-serif;white-space:normal;box-shadow:0 8px 24px rgba(31,41,35,.2);}.toast .material-symbols-outlined{font-size:19px;flex:0 0 19px;}.toast.success .material-symbols-outlined{color:#8FD3A4;}.toast.error .material-symbols-outlined{color:#FF9B88;}.toast.info .material-symbols-outlined{color:#F5D985;}
+
 
 
 </style>
@@ -4221,6 +4228,15 @@ body:not(.account-v2-active) .home-v2-nav .bottom-nav-item.active .material-symb
 
       </div>
 
+      <section class="network-v2-state" id="network-state-v2" aria-labelledby="network-v2-title" aria-live="polite">
+        <div class="network-v2-card">
+          <div class="network-v2-icon"><span class="material-symbols-outlined" aria-hidden="true">cloud_off</span></div>
+          <h2 id="network-v2-title">网络开小差了</h2>
+          <p>检查网络连接后重试。已收藏的集市仍可从本机记录中查看。</p>
+          <button class="network-v2-primary" type="button" onclick="retryNetworkV2()">重新连接</button>
+          <button class="network-v2-secondary" type="button" onclick="openOfflineFavoritesV2()">先看我的收藏</button>
+        </div>
+      </section>
     </div>
 
 
@@ -4504,7 +4520,7 @@ body:not(.account-v2-active) .home-v2-nav .bottom-nav-item.active .material-symb
 
 
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"><span class="material-symbols-outlined" id="toast-icon" aria-hidden="true">check_circle</span><span id="toast-text"></span></div>
 
 
 
@@ -7994,6 +8010,50 @@ function _updateCategoryList(cats) {
   if (localStorage.getItem('zjsLargeText') === '1') document.body.classList.add('large-text-v2');
 })();
 
+(function networkFeedbackV2Runtime(){
+  let forcedNetworkPreviewV2 = false;
+
+  window.setNetworkStateV2 = function(offline,{announce=true,force=false}={}){
+    const state = document.getElementById('network-state-v2');
+    if (!state) return;
+    forcedNetworkPreviewV2 = force && offline;
+    const wasOpen = state.classList.contains('open');
+    state.classList.toggle('open',offline);
+    state.setAttribute('aria-hidden',offline ? 'false' : 'true');
+    if (!offline && wasOpen && announce) showToast('网络已恢复','success');
+  };
+
+  window.retryNetworkV2 = function(){
+    if (forcedNetworkPreviewV2 || navigator.onLine) {
+      forcedNetworkPreviewV2 = false;
+      setNetworkStateV2(false,{announce:false});
+      showToast('连接成功，内容已刷新','success');
+      if (!new URLSearchParams(location.search).get('preview') && typeof loadNearbyMarkets === 'function') loadNearbyMarkets();
+      return;
+    }
+    showToast('仍未连接网络，请检查后重试','error');
+  };
+
+  window.openOfflineFavoritesV2 = function(){
+    setNetworkStateV2(false,{announce:false});
+    if (currentUser) openFavPage();
+    else requireLoginScreen('登录后查看本机收藏');
+  };
+
+  window.applyNetworkPreviewStateV2 = function(){
+    if (new URLSearchParams(location.search).get('preview') !== 'no-network') return false;
+    document.body.classList.add('home-preview');
+    showScreen('user-screen');
+    switchUserPage('home');
+    const time = document.getElementById('home-preview-time'); if (time) time.textContent = '09:26';
+    setNetworkStateV2(true,{announce:false,force:true});
+    return true;
+  };
+
+  window.addEventListener('offline',() => setNetworkStateV2(true,{announce:false}));
+  window.addEventListener('online',() => { if (!forcedNetworkPreviewV2) setNetworkStateV2(false,{announce:true}); });
+})();
+
 (function detailV2Runtime(){
   const PREVIEW_TODAY = '2026-07-13';
   const FULL_OPEN_DAYS = [
@@ -8163,6 +8223,10 @@ function _updateCategoryList(cats) {
   }
   if (['favorites','my'].includes(homePreviewMode)) {
     setTimeout(applyFavoritesMyPreviewState, 0);
+    return;
+  }
+  if (homePreviewMode === 'no-network') {
+    setTimeout(applyNetworkPreviewStateV2, 0);
     return;
   }
 
@@ -18280,11 +18344,27 @@ function showPrompt(msg, defaultVal = '') {
 
 }
 
-function showToast(msg){
+function showToast(msg,type){
 
   const t=document.getElementById('toast');
 
-  t.textContent=msg;t.classList.add('show');
+  const text=document.getElementById('toast-text');
+
+  const icon=document.getElementById('toast-icon');
+
+  if (!t || !text || !icon) return;
+
+  let tone=type;
+
+  if (!tone) tone=/失败|错误|无法|未连接|异常/.test(String(msg))?'error':/请|暂不|预览|待/.test(String(msg))?'info':'success';
+
+  const icons={success:'check_circle',error:'error',info:'info'};
+
+  text.textContent=String(msg);
+
+  icon.textContent=icons[tone]||icons.info;
+
+  t.className=`toast ${tone} show`;
 
   clearTimeout(t._timer);t._timer=setTimeout(()=>t.classList.remove('show'),2500);
 

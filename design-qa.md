@@ -252,3 +252,44 @@ passed
 ### final result
 
 passed
+
+---
+
+## 无网络与操作反馈
+
+- 设计依据：已验收 Figma 空状态组件（节点 `9:87`）与 Figma 03 tokens；设计文件未提供独立“无网络”整屏 frame，因此并排图仅用于核对同一空状态组件语言，不把两种业务状态作逐字逐像素比较。
+- 视口：375 × 812
+- 预览入口：`?preview=no-network`
+- 组件参考：`output/frontend-home/reference-home-empty.png`
+- 实现截图：`output/frontend-feedback/implementation-no-network.png`
+- 并排模式对比：`output/frontend-feedback/comparison-no-network-pattern.png`
+
+### Findings
+
+- 无遗留 P0 / P1 / P2 问题。
+- P3：无网络态只保留一个主卡片，较“附近无集市”状态更聚焦连接恢复；这是业务状态差异，不是布局缺失。
+
+### 五项保真检查
+
+- 字体与排版：通过。标题使用 Noto Serif SC，正文与按钮使用 Noto Sans SC；正文 14px/22px，按钮 16px。
+- 间距与布局：通过。复用 343px 内容宽度、20px 卡片圆角与 16px 页面边距；主按钮 50px，次按钮 46px，均满足 44px 热区。
+- 色彩与 tokens：通过。主操作使用暖陶红，离线图标使用稻谷金衍生色，次操作使用深松绿；错误或离线状态始终带图标与文字。
+- 图像与图标：通过。`cloud_off`、成功、错误和信息提示均使用 Material Symbols，无 CSS 图形或 emoji 替代。
+- 文案与数据：通过。明确网络故障、重试动作和本机收藏的降级能力；不承诺未缓存数据可离线访问。
+
+### 状态与交互检查
+
+- 浏览器 `offline` 事件打开无网络状态，`online` 事件关闭并显示“网络已恢复”成功 toast。
+- 实测点击“重新连接”关闭状态页，toast 文案为“连接成功，内容已刷新”，图标为 `check_circle`，类型为 `success`。
+- Toast 统一为 44px 最小高度；成功、错误、信息分别带 `check_circle`、`error`、`info` 图标，避免只靠相近色系表达状态。
+- “先看我的收藏”在已登录时进入收藏页，游客则触发一步登录，不新增阻塞引导。
+- 预览入口控制台无 error / warn；全量 pytest `37 passed`。
+
+### Comparison history
+
+1. 原实现只有纯文字深色 toast，升级为图标 + 文案的三语义反馈，并保留所有旧调用兼容。
+2. 新增无网络运行时状态、重试和本机收藏降级路径；以空状态组件参考图并排复核卡片宽度、圆角、标题层级、按钮高度与底部导航。
+
+### final result
+
+passed
