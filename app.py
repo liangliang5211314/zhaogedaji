@@ -395,6 +395,9 @@ def init_db():
     conn.execute("INSERT OR IGNORE INTO app_settings(key,value) VALUES('region_whitelist','[\"河北省·保定市\",\"北京市\"]')")
     # 是否在首页展示"附近市场"区块（便民市场/农贸市场等）
     conn.execute("INSERT OR IGNORE INTO app_settings(key,value) VALUES('show_market_section','false')")
+    # 高德 JS API 浏览器端配置。值仅保存在数据库/.env，禁止写入前端源码。
+    conn.execute("INSERT OR IGNORE INTO app_settings(key,value) VALUES('amap_js_key','')")
+    conn.execute("INSERT OR IGNORE INTO app_settings(key,value) VALUES('amap_js_security_code','')")
     # 通义千问 API Key（用于图片识别导入集市）
     conn.execute("INSERT OR IGNORE INTO app_settings(key,value) VALUES('gemini_api_key',?)", (_qwen_key,))
     # AI 校验接口配置（支持多接口切换）
@@ -805,6 +808,20 @@ def _get_setting(conn, key, default=''):
     row = conn.execute("SELECT value FROM app_settings WHERE key=?", (key,)).fetchone()
     return row[0] if row else default
 
+
+@app.route('/api/app-config/map', methods=['GET'])
+def app_map_config():
+    """仅下发浏览器加载高德 JS API 所需的公开配置，不暴露 Web 服务 Key。"""
+    conn = get_db()
+    js_key = _get_setting(conn, 'amap_js_key')
+    security_code = _get_setting(conn, 'amap_js_security_code')
+    conn.close()
+    return ok({
+        'configured': bool(js_key and security_code),
+        'js_key': js_key,
+        'security_code': security_code,
+    })
+
 @app.route('/api/auth/wx-oauth', methods=['POST'])
 def wx_oauth():
     """微信网页授权登录（服务号H5）"""
@@ -1069,9 +1086,10 @@ def admin_get_districts():
     if not city:
         return jsonify(code=400, message='city required')
     conn = get_db()
-    key_row = conn.execute("SELECT value FROM settings WHERE key='amap_ws_key'").fetchone()
+    key = _get_setting(conn, 'amap_ws_key')
     conn.close()
-    key = (key_row[0] if key_row else '') or '4f51ff7eb37bec522a9278847a44d2f0'
+    if not key:
+        return jsonify(code=400, message='未配置高德 Web 服务 Key', data=[])
     url = (f'https://restapi.amap.com/v3/config/district'
            f'?keywords={urllib.parse.quote(city)}&subdistrict=1&key={key}&extensions=base')
     try:
@@ -1122,7 +1140,7 @@ def ai_verify_market():
         ai_cfg = ('通义千问', 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', _k('gemini_api_key'), 'qwen-plus')
     elif _k('glm_api_key'):
         ai_cfg = ('智谱GLM', 'https://open.bigmodel.cn/api/paas/v4/chat/completions', _k('glm_api_key'), 'glm-4-flash')
-    amap_key = _k('amap_ws_key') or '4f51ff7eb37bec522a9278847a44d2f0'
+    amap_key = _k('amap_ws_key')
 
     # ── 本地查重 ──────────────────────────────────────────────────
     import re as _re2
@@ -1156,6 +1174,8 @@ def ai_verify_market():
     # ── 高德 geocoding ────────────────────────────────────────────
     def _geocode(query):
         import urllib.request, urllib.parse
+        if not amap_key:
+            return None
         url = (f'https://restapi.amap.com/v3/geocode/geo'
                f'?address={urllib.parse.quote(query)}&key={amap_key}&output=json')
         try:
@@ -4991,6 +5011,40 @@ def amap_key_setting():
     conn.commit()
     conn.close()
     return jsonify({'code': 200, 'msg': '已保存'})
+
+
+@app.route('/api/admin/amap-js-config', methods=['GET', 'POST'])
+@admin_required
+def amap_js_config_setting():
+    """管理高德 Web端(JS API) Key；与服务端 amap_ws_key 严格分离。"""
+    conn = get_db()
+    if request.method == 'GET':
+        js_key = _get_setting(conn, 'amap_js_key')
+        security_code = _get_setting(conn, 'amap_js_security_code')
+        conn.close()
+        return jsonify({'code': 200, 'data': {
+            'configured': bool(js_key and security_code),
+            'key_tail': js_key[-6:] if js_key else '',
+            'security_tail': security_code[-6:] if security_code else '',
+        }})
+
+    data = request.get_json(force=True) or {}
+    js_key = (data.get('js_key') or '').strip()
+    security_code = (data.get('security_code') or '').strip()
+    if len(js_key) != 32 or len(security_code) != 32:
+        conn.close()
+        return jsonify({'code': 400, 'msg': 'JS API Key 与安全密钥均应为32位'}), 400
+    conn.execute(
+        "INSERT OR REPLACE INTO app_settings(key,value) VALUES('amap_js_key',?)",
+        (js_key,),
+    )
+    conn.execute(
+        "INSERT OR REPLACE INTO app_settings(key,value) VALUES('amap_js_security_code',?)",
+        (security_code,),
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({'code': 200, 'msg': '高德 JS API 配置已保存'})
 
 
 @app.route('/api/admin/amap-poi/import', methods=['POST'])

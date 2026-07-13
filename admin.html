@@ -1051,11 +1051,11 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;}
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
                   <div>
                     <div class="cms-label">JS API Key <span style="color:var(--gray);font-weight:400;font-size:11px;">（高德控制台获取）</span></div>
-                    <input class="cms-input" id="set-amap-key" value="4f51ff7eb37bec522a9278847a44d2f0" placeholder="32位Key字符串">
+                    <input class="cms-input" id="set-amap-key" value="" autocomplete="off" placeholder="未配置；请输入32位JS API Key">
                   </div>
                   <div>
                     <div class="cms-label">安全密钥 Security Code <span style="color:var(--gray);font-weight:400;font-size:11px;">（2021年后必填）</span></div>
-                    <input class="cms-input" id="set-amap-security" value="d42d560fd5c8e7297d0d02ce1056bd7f" placeholder="32位安全密钥">
+                    <input class="cms-input" id="set-amap-security" value="" autocomplete="off" placeholder="未配置；请输入32位安全密钥">
                   </div>
                 </div>
                 <div style="background:rgba(212,168,69,.08);border:1px solid rgba(212,168,69,.3);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--ink-mid);line-height:1.8;">
@@ -1982,11 +1982,11 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;}
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
                   <div>
                     <div class="cms-label">JS API Key <span style="color:var(--gray);font-weight:400;font-size:11px;">（高德控制台获取）</span></div>
-                    <input class="cms-input" id="set-amap-key" value="4f51ff7eb37bec522a9278847a44d2f0" placeholder="32位Key字符串">
+                    <input class="cms-input" id="set-amap-key" value="" autocomplete="off" placeholder="未配置；请输入32位JS API Key">
                   </div>
                   <div>
                     <div class="cms-label">安全密钥 Security Code <span style="color:var(--gray);font-weight:400;font-size:11px;">（2021年后必填）</span></div>
-                    <input class="cms-input" id="set-amap-security" value="d42d560fd5c8e7297d0d02ce1056bd7f" placeholder="32位安全密钥">
+                    <input class="cms-input" id="set-amap-security" value="" autocomplete="off" placeholder="未配置；请输入32位安全密钥">
                   </div>
                 </div>
                 <div style="background:rgba(212,168,69,.08);border:1px solid rgba(212,168,69,.3);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--ink-mid);line-height:1.8;">
@@ -3550,6 +3550,7 @@ function waitForAmap(callback, maxWait = 8000) {
   const start = Date.now();
   const check = () => {
     if (window.AMap) { callback(); return; }
+    if (window.adminAmapLoadFailed) { callback(true); return; }
     if (Date.now() - start > maxWait) {
       console.warn('[AMap] SDK 加载超时，降级使用浏览器定位');
       callback(true); // fallback flag
@@ -8646,11 +8647,11 @@ async function _saveRegions() {
 }
 
 // ── APP基础设置 ───────────────────────────────────────────────
-function loadAppSettings() {
+async function loadAppSettings() {
   const settings = JSON.parse(localStorage.getItem('zjsAppSettings') || '{}');
   const fields = ['set-appname','set-slogan','set-phone','set-wechat','set-email',
                   'set-recommend-title','set-search-hint','set-nearby-btn','set-copyright',
-                  'set-daily-limit','set-banned-words','set-amap-key','set-amap-security'];
+                  'set-daily-limit','set-banned-words'];
   fields.forEach(id => {
     const el = document.getElementById(id);
     if (el && settings[id] !== undefined) {
@@ -8664,12 +8665,19 @@ function loadAppSettings() {
     const el = document.getElementById(id);
     if (el && settings[id] !== undefined) el.checked = settings[id];
   });
+  const mapConfig = await API.get('/admin/amap-js-config');
+  if (mapConfig?.code === 200 && mapConfig.data?.configured) {
+    const keyInput = document.getElementById('set-amap-key');
+    const securityInput = document.getElementById('set-amap-security');
+    if (keyInput) keyInput.placeholder = `已配置 · 末六位 ${mapConfig.data.key_tail}`;
+    if (securityInput) securityInput.placeholder = `已配置 · 末六位 ${mapConfig.data.security_tail}`;
+  }
 }
 
-function saveAppSettings() {
+async function saveAppSettings() {
   const fields = ['set-appname','set-slogan','set-phone','set-wechat','set-email',
                   'set-recommend-title','set-search-hint','set-nearby-btn','set-copyright',
-                  'set-daily-limit','set-banned-words','set-amap-key','set-amap-security'];
+                  'set-daily-limit','set-banned-words'];
   const toggles = ['set-banner','set-publish','set-review','set-register','set-maintain',
                    'set-audit-market','set-audit-review'];
   const settings = {};
@@ -8682,56 +8690,53 @@ function saveAppSettings() {
     if (el) settings[id] = el.checked;
   });
   localStorage.setItem('zjsAppSettings', JSON.stringify(settings));
-  showToast('✅ 设置已保存');
-
-  // 提示地图Key需重新部署
-  const newKey = settings['set-amap-key'];
-  const newSec = settings['set-amap-security'];
+  const newKey = document.getElementById('set-amap-key')?.value.trim() || '';
+  const newSec = document.getElementById('set-amap-security')?.value.trim() || '';
   if (newKey || newSec) {
     const result = document.getElementById('amap-test-result');
+    const saved = await API.post('/admin/amap-js-config', {
+      js_key: newKey,
+      security_code: newSec,
+    });
+    if (saved?.code !== 200) {
+      if (result) {
+        result.style.display = 'block';
+        result.style.background = 'rgba(200,57,43,.08)';
+        result.style.border = '1px solid rgba(200,57,43,.3)';
+        result.textContent = saved?.msg || '地图配置保存失败';
+      }
+      showToast('地图配置保存失败');
+      return;
+    }
+    document.getElementById('set-amap-key').value = '';
+    document.getElementById('set-amap-security').value = '';
     if (result) {
       result.style.display = 'block';
-      result.style.background = 'rgba(212,168,69,.1)';
-      result.style.border = '1px solid rgba(212,168,69,.4)';
+      result.style.background = 'rgba(45,122,79,.08)';
+      result.style.border = '1px solid rgba(45,122,79,.3)';
       result.style.color = 'var(--ink-mid)';
-      result.innerHTML = `⚠️ 地图Key已保存到本地。如需在用户端生效，请将 index.html 第587、596行的Key替换后重新上传服务器。<br>当前Key：<code style="background:rgba(0,0,0,.06);padding:2px 6px;border-radius:4px;">${newKey}</code>`;
+      result.textContent = 'JS API 配置已安全保存到数据库；无需修改或重新部署 HTML。';
     }
   }
+  showToast('✅ 设置已保存');
 }
 
 function testAmapKey() {
   const key = document.getElementById('set-amap-key')?.value.trim();
+  const security = document.getElementById('set-amap-security')?.value.trim();
   const result = document.getElementById('amap-test-result');
-  if (!key || key.length !== 32) {
+  if (!key || key.length !== 32 || !security || security.length !== 32) {
     result.style.display = 'block';
     result.style.background = 'rgba(200,57,43,.08)';
     result.style.border = '1px solid rgba(200,57,43,.3)';
-    result.innerHTML = '❌ Key格式不正确，应为32位字符串';
+    result.textContent = 'JS API Key 与安全密钥均应为32位字符串';
     return;
   }
   result.style.display = 'block';
-  result.style.background = 'rgba(45,122,79,.08)';
-  result.style.border = '1px solid rgba(45,122,79,.3)';
+  result.style.background = 'rgba(212,168,69,.1)';
+  result.style.border = '1px solid rgba(212,168,69,.4)';
   result.style.color = 'var(--ink-mid)';
-  result.innerHTML = '🔍 正在测试...';
-  // 通过加载地图脚本测试
-  const testUrl = `https://restapi.amap.com/v3/ip?key=${key}&output=json`;
-  fetch(testUrl)
-    .then(r => r.json())
-    .then(d => {
-      if (d.status === '1') {
-        result.innerHTML = `✅ Key有效！当前IP位置：${d.province||''}${d.city||''}`;
-        result.style.background = 'rgba(45,122,79,.08)';
-        result.style.border = '1px solid rgba(45,122,79,.3)';
-      } else {
-        result.innerHTML = `❌ Key无效，错误：${d.info||d.infocode}`;
-        result.style.background = 'rgba(200,57,43,.08)';
-        result.style.border = '1px solid rgba(200,57,43,.3)';
-      }
-    })
-    .catch(() => {
-      result.innerHTML = '⚠️ 网络请求失败，请检查Key是否正确或稍后重试';
-    });
+  result.textContent = '格式校验通过。保存后请在地图页验证域名白名单与实际加载状态。';
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -9459,11 +9464,41 @@ function showToast(msg){
   </div>
 </div>
 
-<!-- 高德地图 SDK -->
+<!-- 高德 JS API 配置由服务端数据库下发；Web 服务 Key 永不进入浏览器。 -->
 <script>
-window._AMapSecurityConfig = { securityJsCode: 'd42d560fd5c8e7297d0d02ce1056bd7f' };
+window.loadAdminAMapSdk = function loadAdminAMapSdk() {
+  if (window.AMap) return Promise.resolve(window.AMap);
+  if (window.adminAmapSdkPromise) return window.adminAmapSdkPromise;
+  window.adminAmapSdkPromise = fetch('/api/app-config/map', {cache: 'no-store'})
+    .then(response => {
+      if (!response.ok) throw new Error('地图配置读取失败');
+      return response.json();
+    })
+    .then(payload => {
+      const config = payload && payload.data;
+      if (!config || !config.configured || !config.js_key || !config.security_code) {
+        throw new Error('高德 JS API 未配置');
+      }
+      window._AMapSecurityConfig = {securityJsCode: config.security_code};
+      return new Promise((resolve, reject) => {
+        const sdk = document.createElement('script');
+        sdk.src = 'https://webapi.amap.com/maps?v=2.0&key=' + encodeURIComponent(config.js_key)
+          + '&plugin=AMap.Geocoder,AMap.PlaceSearch,AMap.Marker';
+        sdk.async = true;
+        sdk.onload = () => resolve(window.AMap);
+        sdk.onerror = () => reject(new Error('高德 SDK 加载失败'));
+        document.head.appendChild(sdk);
+      });
+    })
+    .catch(error => {
+      window.adminAmapLoadFailed = true;
+      console.warn('[AMap] 后台地图功能不可用：' + error.message);
+      throw error;
+    });
+  return window.adminAmapSdkPromise;
+};
+window.loadAdminAMapSdk().catch(() => {});
 </script>
-<script src="https://webapi.amap.com/maps?v=2.0&key=4f51ff7eb37bec522a9278847a44d2f0&plugin=AMap.Geocoder,AMap.PlaceSearch,AMap.Marker" async onerror="console.warn('[AMap] SDK加载失败')"></script>
 
 <script>
 

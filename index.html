@@ -2135,70 +2135,53 @@ body:not(.account-v2-active) .home-v2-nav .bottom-nav-item.active .material-symb
 
 
 
-  <!-- ═══════════════════════════════════════════════════
-
-       高德地图 JS API v2.0
-
-       ⚠️  将下面的 4f51ff7eb37bec522a9278847a44d2f0 替换为你自己的Key
-
-       申请地址：https://lbs.amap.com/dev/key/app
-
-  ════════════════════════════════════════════════════ -->
-
+  <!-- 高德 JS API 配置由服务端数据库下发；Web 服务 Key 永不进入浏览器。 -->
   <script>
-
-    // 🔑 高德地图配置（安全密钥必须在SDK加载前注入）
-
-    window._AMapSecurityConfig = {
-
-      securityJsCode: 'd42d560fd5c8e7297d0d02ce1056bd7f',
-
-    };
-
-    window.AMAP_KEY = '4f51ff7eb37bec522a9278847a44d2f0';
-
-    window.AMAP_SECURITY_CODE = 'd42d560fd5c8e7297d0d02ce1056bd7f';
-
-  </script>
-
-  <script>
-
-  // 高德SDK动态异步加载，失败不影响主程序
-
-  (function loadAMap() {
-
-    var s = document.createElement('script');
-
-    s.src = 'https://webapi.amap.com/maps?v=2.0&key=4f51ff7eb37bec522a9278847a44d2f0&plugin=AMap.Geolocation,AMap.Driving,AMap.Walking,AMap.Marker,AMap.InfoWindow,AMap.Scale,AMap.ToolBar';
-
-    s.async = true;
-
-    s.onerror = function() {
-
-      console.warn('[AMap] SDK加载失败，地图功能不可用，其他功能正常');
-
-      window.amapLoadFailed = true;
-
-    };
-
-    s.onload = function() {
-
-      var ui = document.createElement('script');
-
-      ui.src = 'https://webapi.amap.com/ui/1.1/main.js';
-
-      ui.async = true;
-
-      ui.onload = function() { window.onAmapLoaded && window.onAmapLoaded(); };
-
-      document.head.appendChild(ui);
-
-    };
-
-    document.head.appendChild(s);
-
-  })();
-
+  window.loadAMapSdk = function loadAMapSdk() {
+    if (window.AMap) return Promise.resolve(window.AMap);
+    if (window.amapSdkPromise) return window.amapSdkPromise;
+    window.amapSdkPromise = fetch('/api/app-config/map', {cache: 'no-store'})
+      .then(function(response) {
+        if (!response.ok) throw new Error('地图配置读取失败');
+        return response.json();
+      })
+      .then(function(payload) {
+        var config = payload && payload.data;
+        if (!config || !config.configured || !config.js_key || !config.security_code) {
+          throw new Error('高德 JS API 未配置');
+        }
+        window._AMapSecurityConfig = {securityJsCode: config.security_code};
+        return new Promise(function(resolve, reject) {
+          var sdk = document.createElement('script');
+          sdk.src = 'https://webapi.amap.com/maps?v=2.0&key=' + encodeURIComponent(config.js_key)
+            + '&plugin=AMap.Geolocation,AMap.Driving,AMap.Walking,AMap.Marker,AMap.InfoWindow,AMap.Scale,AMap.ToolBar,AMap.PlaceSearch,AMap.Geocoder';
+          sdk.async = true;
+          sdk.onerror = function() { reject(new Error('高德 SDK 加载失败')); };
+          sdk.onload = function() {
+            var ui = document.createElement('script');
+            ui.src = 'https://webapi.amap.com/ui/1.1/main.js';
+            ui.async = true;
+            ui.onload = function() {
+              window.onAmapLoaded && window.onAmapLoaded();
+              resolve(window.AMap);
+            };
+            ui.onerror = function() {
+              window.onAmapLoaded && window.onAmapLoaded();
+              resolve(window.AMap);
+            };
+            document.head.appendChild(ui);
+          };
+          document.head.appendChild(sdk);
+        });
+      })
+      .catch(function(error) {
+        window.amapLoadFailed = true;
+        console.warn('[AMap] 地图功能不可用，其他功能正常：' + error.message);
+        throw error;
+      });
+    return window.amapSdkPromise;
+  };
+  window.loadAMapSdk().catch(function() {});
   </script>
 
 
@@ -9685,6 +9668,8 @@ function waitForAmap(callback, maxWait = 8000) {
 
     if (window.AMap) { callback(); return; }
 
+    if (window.amapLoadFailed) { callback(true); return; }
+
     if (Date.now() - start > maxWait) {
 
       console.warn('[AMap] SDK 加载超时，降级使用浏览器定位');
@@ -13941,19 +13926,10 @@ function openPubMapPicker() {
 
 
 
-  if (window.AMap) { initMap(); }
-
-  else {
-
-    const s = document.createElement('script');
-
-    s.src = 'https://webapi.amap.com/maps?v=2.0&key=4f51ff7eb37bec522a9278847a44d2f0&plugin=AMap.PlaceSearch,AMap.Geocoder,AMap.Marker';
-
-    s.onload = initMap;
-
-    document.head.appendChild(s);
-
-  }
+  if (window.AMap) initMap();
+  else window.loadAMapSdk()
+    .then(initMap)
+    .catch(() => showToast('地图服务暂不可用，请稍后重试'));
 
 }
 
