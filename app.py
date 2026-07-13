@@ -4244,6 +4244,8 @@ def admin_todo_summary():
         ).fetchone()[0], 'page': 'review', 'tab': 'reviews'},
         {'key': 'coordinates', 'label': '待复核坐标', 'count': review_counts.get('geocode', 0),
          'page': 'review', 'tab': 'geocode'},
+        {'key': 'names', 'label': '名称复核', 'count': review_counts.get('market_name_ocr', 0),
+         'page': 'review', 'tab': 'market_name_ocr'},
         {'key': 'open_time', 'label': '集期复核', 'count': review_counts.get('open_time_v2', 0),
          'page': 'review', 'tab': 'open_time_v2'},
         {'key': 'feedback', 'label': '用户反馈', 'count': conn.execute(

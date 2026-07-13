@@ -415,3 +415,19 @@ passed
 ### final result
 
 passed
+
+---
+
+## OCR 名称复核生产闭环
+
+- 触发原因：坐标补救后已有 84 条 `market_name_ocr` 待复核记录，但原后台审核页只暴露坐标与集期两类数据复核，待办总数也未包含名称复核。
+- 修正：待办中心新增“名称复核”一行；审核中心新增“名称复核”Tab；两处均读取 `data_review_queue.issue_type=market_name_ocr` 的真实数量与队列内容。
+- 同步修正：集市线索、用户反馈、摊主申请三个审核 Tab 从示例数据切换到各自真实接口；当前 Tab 的徽标与队列总数使用接口返回值，不再把设计示例数当生产数据。
+- 交互：OCR 队列明确提示“AI 仅做风险标记，需人工核对原文与证据”；通过/忽略均写 `reviewed_by` 与原因，驳回必须选择原因。
+- 本地预览：`?preview=admin-review` 可见评价、线索、坐标、名称、集期、反馈、摊主七个 Tab；名称复核显示 84 项并可进入左列表右详情。
+- 截图：`output/admin-pages/name-review-1280.png`（额外运行态档案；原后台 1440px 设计对照档案保持不变）。
+- 自动化：全量 pytest `57 passed`，`app.py` 编译通过，浏览器运行时无脚本中断。
+
+### final result
+
+passed

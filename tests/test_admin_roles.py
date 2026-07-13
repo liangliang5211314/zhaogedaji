@@ -99,6 +99,11 @@ def test_todo_summary_uses_real_queue_counts(role_client):
                entity_type,entity_id,issue_type,reason,status
            ) VALUES('market','m-time','open_time_v2','集期待复核','pending')"""
     )
+    conn.execute(
+        """INSERT INTO data_review_queue(
+               entity_type,entity_id,issue_type,reason,status
+           ) VALUES('market','m-name','market_name_ocr','名称疑似 OCR 损坏','pending')"""
+    )
     conn.commit()
     conn.close()
 
@@ -107,6 +112,7 @@ def test_todo_summary_uses_real_queue_counts(role_client):
     ).get_json()["data"]
     counts = {item["key"]: item["count"] for item in data["items"]}
     assert counts["coordinates"] == 1
+    assert counts["names"] == 1
     assert counts["open_time"] == 1
     assert data["total"] == sum(counts.values())
 

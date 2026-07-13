@@ -1,12 +1,18 @@
-# 生产部署待补信息
+# 生产上线待决清单
 
-当前代码、数据库同步工具和本地演练均已就绪。以下信息在仓库与本机配置中无法确认；在取得答案前不会连接或写入生产服务器。
+## 已确认
 
-1. SSH 地址、端口、登录用户，以及应使用的 SSH key/主机别名（请确认后台里出现的 `39.103.57.77` 是否就是生产机）。
-2. 生产项目目录是否仍为 `/www/wwwroot/zhaogedaji`。
-3. 生产服务由 `systemd` 的 `zhaojishi.service` 管理，还是由宝塔 Python 项目管理器管理。
-4. 服务器从哪里取得代码：当前本机仓库只有局域网 NAS remote `nas`，生产机通常无法访问；需要可访问的 Git remote，或授权改用 SSH/rsync 发布代码。
-5. 用于公网冒烟检查的正式域名/健康检查 URL，以及高德 JS API 白名单是否已包含该域名。
-6. 请确认生产 `config.py` 或环境变量中的 `API_SECRET`、`ADMIN_KEY`、`JWT_SECRET` 均已改为非默认随机值；新部署脚本会拒绝使用仓库默认值启动。
+- 生产 SSH：本机别名 `xiaotudou-prod`，目标服务器 `39.103.57.77`。
+- 项目目录：`/www/wwwroot/zhaogedaji`。
+- 服务管理：`systemd` 的 `zhaojishi.service`。
+- 正式域名：C 端 `https://app.xingjiawu.cn`；后台 `https://admin.xingjiawu.cn`。
+- 代码来源：GitHub `liangliang5211314/zhaogedaji`；服务器网络异常时使用经过 `git bundle verify` 的快进 bundle，仍由 `deploy.sh` 执行备份、更新、重启与健康检查。
+- 生产 `API_SECRET`、`ADMIN_KEY`、`JWT_SECRET` 已换为非默认随机值；旧管理密钥兼容关闭。
+- 高德 Web 服务 Key 已在生产 `app_settings.amap_ws_key` 中配置，不进入 Git。
 
-拿到以上信息后的执行顺序：只读预检 → 拉取生产库副本/生成集市差异 → 你确认差异 → 生产 SQLite 在线备份 → 幂等同步集市基础资料 → 更新代码 → 数据库完整性与内外网健康检查。
+## 仍需外部操作
+
+1. 高德控制台创建或提供“Web 端（JS API）”Key 与安全密钥 `securityJsCode`，并把 `app.xingjiawu.cn` 加入域名白名单。它们与 Web 服务 Key 不是同一种凭据；当前 `/api/app-config/map` 明确返回 `configured=false`，地图页使用降级提示。
+2. 使用真实手机完成最后一项硬件验收：打开首页 → 授权定位 → 附近列表 → 详情 → 导航跳转高德。桌面浏览器无法替代系统定位权限和地图 App 唤起证明。
+
+以上两项完成前，不把“真实地图 + 手机实机”标为通过；其它生产接口、数据安全、后台权限与页面运行态继续独立验收。
