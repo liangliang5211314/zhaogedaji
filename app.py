@@ -352,12 +352,15 @@ def init_db():
         "ALTER TABLE markets ADD COLUMN review_count INTEGER DEFAULT 0",
         "ALTER TABLE markets ADD COLUMN rating REAL",
         "ALTER TABLE markets ADD COLUMN scale TEXT DEFAULT ''",
+        "ALTER TABLE markets ADD COLUMN updated_by INTEGER",
         "ALTER TABLE reviews ADD COLUMN videos TEXT DEFAULT '[]'",
         "ALTER TABLE reviews ADD COLUMN audit_reason TEXT DEFAULT ''",
         "ALTER TABLE reviews ADD COLUMN audited_by INTEGER",
         "ALTER TABLE reviews ADD COLUMN audited_at TEXT DEFAULT ''",
         "ALTER TABLE market_reminders ADD COLUMN remind_evening INTEGER NOT NULL DEFAULT 1",
         "ALTER TABLE market_reminders ADD COLUMN remind_morning INTEGER NOT NULL DEFAULT 1",
+        "ALTER TABLE data_review_queue ADD COLUMN reviewed_by INTEGER",
+        "ALTER TABLE data_review_queue ADD COLUMN review_reason TEXT DEFAULT ''",
     ]:
         try: conn.execute(col_sql)
         except: pass
@@ -621,6 +624,22 @@ def admin_required(f):
         user = _get_user_from_token()
         if not user or user['role'] not in ('admin', 'superadmin'):
             return err('权限不足', 403)
+        request.current_user = user
+        return f(*args, **kwargs)
+    return decorated
+
+
+def superadmin_required(f):
+    """系统设置与高风险动作仅允许超级管理员。"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        old_key = request.headers.get('X-Admin-Key', '')
+        if hmac.compare_digest(old_key, ADMIN_KEY):
+            request.current_user = {'id': 0, 'role': 'superadmin', 'phone': 'system'}
+            return f(*args, **kwargs)
+        user = _get_user_from_token()
+        if not user or user['role'] != 'superadmin':
+            return err('仅超级管理员可访问系统设置', 403)
         request.current_user = user
         return f(*args, **kwargs)
     return decorated
@@ -906,7 +925,7 @@ def wx_oauth():
 
 
 @app.route('/api/admin/settings/oauth', methods=['GET'])
-@admin_required
+@superadmin_required
 def get_oauth_settings():
     conn = get_db()
     keys = ['wx_appid','wx_secret','mp_appid','mp_secret']
@@ -919,7 +938,7 @@ def get_oauth_settings():
 
 
 @app.route('/api/admin/settings/oauth', methods=['POST'])
-@admin_required
+@superadmin_required
 def save_oauth_settings():
     data = request.get_json(force=True) or {}
     conn = get_db()
@@ -933,7 +952,7 @@ def save_oauth_settings():
 
 
 @app.route('/api/admin/settings/regions', methods=['GET'])
-@admin_required
+@superadmin_required
 def get_region_settings():
     conn = get_db()
     enabled = _get_setting(conn, 'region_whitelist_enabled', 'false') == 'true'
@@ -944,7 +963,7 @@ def get_region_settings():
     return ok({'enabled': enabled, 'regions': regions})
 
 @app.route('/api/admin/settings/regions', methods=['POST'])
-@admin_required
+@superadmin_required
 def save_region_settings():
     data = request.get_json(force=True) or {}
     conn = get_db()
@@ -2343,7 +2362,7 @@ def app_config():
     }})
 
 @app.route('/api/admin/settings/market-section', methods=['GET', 'POST'])
-@admin_required
+@superadmin_required
 def settings_market_section():
     conn = get_db()
     if request.method == 'GET':
@@ -2379,9 +2398,11 @@ def admin_data_review_queue():
         'SELECT COUNT(*) FROM data_review_queue q' + clause, params
     ).fetchone()[0]
     rows = conn.execute(
-        '''SELECT q.*,m.name AS market_name,m.region,m.status AS market_status
+        '''SELECT q.*,m.name AS market_name,m.region,m.status AS market_status,
+                  u.nickname AS operator_name
            FROM data_review_queue q
            LEFT JOIN markets m ON q.entity_type='market' AND m.id=q.entity_id'''
+        + " LEFT JOIN users u ON u.id=q.reviewed_by"
         + clause + ' ORDER BY q.created_at ASC,q.id ASC LIMIT ? OFFSET ?',
         params + [per_page, (page - 1) * per_page],
     ).fetchall()
@@ -2412,16 +2433,26 @@ def admin_update_data_review(queue_id):
     if not exists:
         conn.close()
         return err('复核记录不存在', 404)
+    reason = str(data.get('reason') or '').strip()
     conn.execute(
-        "UPDATE data_review_queue SET status=?,updated_at=datetime('now','localtime') WHERE id=?",
-        (status, queue_id),
+        """UPDATE data_review_queue
+           SET status=?,reviewed_by=?,review_reason=?,
+               updated_at=datetime('now','localtime')
+           WHERE id=?""",
+        (status, request.current_user.get('id', 0), reason, queue_id),
     )
     conn.commit()
     conn.close()
+    log_action(
+        request.current_user.get('id', 0),
+        'resolve_data_review',
+        f'data_review:{queue_id}',
+        f'{status}:{reason}',
+    )
     return ok(None, '复核状态已更新')
 
 @app.route('/api/admin/gemini-key', methods=['GET', 'POST'])
-@admin_required
+@superadmin_required
 def gemini_key():
     conn = get_db()
     if request.method == 'GET':
@@ -2435,7 +2466,7 @@ def gemini_key():
 
 
 @app.route('/api/admin/vision-config', methods=['GET', 'POST'])
-@admin_required
+@superadmin_required
 def vision_config():
     """图片识别多接口配置"""
     conn = get_db()
@@ -2647,7 +2678,7 @@ def gemini_recognize():
 
 
 @app.route('/api/admin/ai-verify-config', methods=['GET', 'POST'])
-@admin_required
+@superadmin_required
 def ai_verify_config():
     """AI校验接口的配置读写（provider + 各平台 key/model）"""
     conn = get_db()
@@ -3883,12 +3914,43 @@ def admin_markets():
     total = conn.execute(f"SELECT COUNT(*) FROM ({sql})", params).fetchone()[0]
     sql  += f" ORDER BY created_at DESC LIMIT {per} OFFSET {(page-1)*per}"
     rows  = conn.execute(sql, params).fetchall()
-    conn.close()
     items = []
+    market_ids = [r['id'] for r in rows]
+    pending_coordinate_ids = set()
+    if market_ids:
+        placeholders = ','.join('?' for _ in market_ids)
+        pending_coordinate_ids = {
+            r[0] for r in conn.execute(
+                f"SELECT entity_id FROM data_review_queue "
+                f"WHERE status='pending' AND issue_type='geocode' "
+                f"AND entity_id IN ({placeholders})",
+                market_ids,
+            ).fetchall()
+        }
+    operator_ids = {r['updated_by'] for r in rows if r['updated_by']}
+    operator_names = {}
+    if operator_ids:
+        placeholders = ','.join('?' for _ in operator_ids)
+        operator_names = {
+            r['id']: r['nickname'] for r in conn.execute(
+                f"SELECT id,nickname FROM users WHERE id IN ({placeholders})",
+                list(operator_ids),
+            ).fetchall()
+        }
     for r in rows:
         d = dict(r)
         d['tags'] = _parse_tags(d.get('tags'))
+        if d['id'] in pending_coordinate_ids or d.get('lat') is None or d.get('lng') is None:
+            d['coordinate_precision'] = '待复核'
+        elif '村' in (d.get('address') or ''):
+            d['coordinate_precision'] = '村庄级'
+        elif (d.get('source') or '').lower().startswith('amap'):
+            d['coordinate_precision'] = 'POI'
+        else:
+            d['coordinate_precision'] = '乡镇级'
+        d['operator_name'] = operator_names.get(d.get('updated_by')) or d.get('created_by') or '未处理'
         items.append(d)
+    conn.close()
     return jsonify({'code': 200, 'data': items, 'total': total,
                     'markets': items})  # 兼容旧格式
 
@@ -3997,6 +4059,7 @@ def admin_update_market(market_id):
         except OpenTimeValidationError as exc:
             return _open_time_error(exc)
         fields['open_time'] = json.dumps(open_time, ensure_ascii=False)
+    fields['updated_by'] = request.current_user.get('id', 0)
     fields['updated_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     sets   = ', '.join(f"{k}=?" for k in fields)
     params = list(fields.values()) + [market_id]
@@ -4131,6 +4194,43 @@ def admin_stats():
 
     conn.close()
     return ok(data)
+
+
+@app.route('/api/admin/todo-summary', methods=['GET'])
+@admin_required
+def admin_todo_summary():
+    """待办中心与侧栏共用的唯一待处理数量数据源。"""
+    conn = get_db()
+    review_counts = dict(conn.execute(
+        "SELECT issue_type,COUNT(*) FROM data_review_queue "
+        "WHERE status='pending' GROUP BY issue_type"
+    ).fetchall())
+    seller_total = 0
+    try:
+        seller_total = conn.execute(
+            "SELECT COUNT(*) FROM seller_applications WHERE status='pending'"
+        ).fetchone()[0]
+    except sqlite3.OperationalError:
+        pass
+    items = [
+        {'key': 'reviews', 'label': '待审评价', 'count': conn.execute(
+            "SELECT COUNT(*) FROM reviews WHERE status='pending'"
+        ).fetchone()[0], 'page': 'review', 'tab': 'reviews'},
+        {'key': 'coordinates', 'label': '待复核坐标', 'count': review_counts.get('geocode', 0),
+         'page': 'review', 'tab': 'geocode'},
+        {'key': 'open_time', 'label': '集期复核', 'count': review_counts.get('open_time_v2', 0),
+         'page': 'review', 'tab': 'open_time_v2'},
+        {'key': 'feedback', 'label': '用户反馈', 'count': conn.execute(
+            "SELECT COUNT(*) FROM feedbacks WHERE status='pending'"
+        ).fetchone()[0], 'page': 'review', 'tab': 'feedback'},
+        {'key': 'clues', 'label': '集市线索', 'count': conn.execute(
+            "SELECT COUNT(*) FROM spider_queue WHERE status='pending'"
+        ).fetchone()[0], 'page': 'review', 'tab': 'clues'},
+        {'key': 'sellers', 'label': '摊主申请', 'count': seller_total,
+         'page': 'users', 'tab': 'sellers'},
+    ]
+    conn.close()
+    return ok({'items': items, 'total': sum(item['count'] for item in items)})
 
 
 @app.route('/api/admin/users', methods=['GET'])
@@ -4407,21 +4507,23 @@ def admin_logs():
     action  = request.args.get('action', '')   # 操作类型筛选
     kw      = request.args.get('kw', '')        # 关键词（目标/详情）
     conn    = get_db()
-    sql     = "SELECT * FROM operation_logs WHERE 1=1"
+    sql     = """SELECT l.*,COALESCE(u.nickname,'系统') AS operator_name
+                 FROM operation_logs l
+                 LEFT JOIN users u ON u.id=l.user_id WHERE 1=1"""
     params  = []
     if action:
-        sql += " AND action=?"; params.append(action)
+        sql += " AND l.action=?"; params.append(action)
     if kw:
-        sql += " AND (target LIKE ? OR detail LIKE ? OR action LIKE ?)"; params += [f'%{kw}%']*3
+        sql += " AND (l.target LIKE ? OR l.detail LIKE ? OR l.action LIKE ? OR u.nickname LIKE ?)"; params += [f'%{kw}%']*4
     total = conn.execute(f"SELECT COUNT(*) FROM ({sql})", params).fetchone()[0]
-    sql  += f" ORDER BY created_at DESC LIMIT {per} OFFSET {(page-1)*per}"
+    sql  += f" ORDER BY l.created_at DESC LIMIT {per} OFFSET {(page-1)*per}"
     rows  = conn.execute(sql, params).fetchall()
     conn.close()
     return ok({'logs': [dict(r) for r in rows], 'total': total, 'page': page, 'per': per})
 
 
 @app.route('/api/admin/logs/clear', methods=['POST'])
-@admin_required
+@superadmin_required
 def admin_logs_clear():
     conn = get_db()
     cnt  = conn.execute("SELECT COUNT(*) FROM operation_logs").fetchone()[0]
@@ -4946,7 +5048,7 @@ def _amap_count_today(conn):
 
 
 @app.route('/api/admin/amap-key/check', methods=['POST'])
-@admin_required
+@superadmin_required
 def amap_key_check():
     import urllib.request, urllib.parse
     data     = request.get_json(force=True) or {}
@@ -4993,7 +5095,7 @@ def amap_key_check():
 
 
 @app.route('/api/admin/amap-key', methods=['GET', 'POST'])
-@admin_required
+@superadmin_required
 def amap_key_setting():
     if request.method == 'GET':
         conn = get_db()
@@ -5014,7 +5116,7 @@ def amap_key_setting():
 
 
 @app.route('/api/admin/amap-js-config', methods=['GET', 'POST'])
-@admin_required
+@superadmin_required
 def amap_js_config_setting():
     """管理高德 Web端(JS API) Key；与服务端 amap_ws_key 严格分离。"""
     conn = get_db()
