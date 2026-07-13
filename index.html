@@ -2002,6 +2002,60 @@ body.map-preview .app-status-preview{display:flex;background:rgba(255,255,255,.9
 .map-v2-user-dot{width:28px;height:28px;border-radius:50%;border:4px solid #fff;background:var(--color-pine);box-shadow:0 2px 8px rgba(31,41,35,.25);}
 .map-v2-searchbar button:focus-visible,.map-v2-locate:focus-visible,.map-v2-chip:focus-visible,.map-v2-card-fav:focus-visible,.map-v2-handle-button:focus-visible{outline:2px solid var(--color-brand);outline-offset:2px;}
 
+/* ═══════════════════════════════════════════════════════════
+   APP V2 · 集市详情页（Figma 04）
+   ═══════════════════════════════════════════════════════════ */
+body.detail-preview{background:#F1EEE8;}
+body.detail-preview #user-screen .user-app{height:1220px;border-radius:24px;}
+body.detail-preview .app-status-preview{display:flex;}
+.detail-v2-active #user-screen .user-top-bar,
+.detail-v2-active #user-screen .user-bottom-nav{display:none!important;}
+.detail-v2-active #user-screen .user-scroll-body{overflow-y:auto;}
+#user-page-detail{min-height:100%;background:var(--color-paper);}
+#user-page-detail>.detail-hero,#user-page-detail>.detail-body{display:none!important;}
+.detail-v2-hero{position:relative;width:100%;height:180px;background:#E7CC94 url('/static/detail-hero-example.png') center/cover no-repeat;overflow:hidden;}
+.detail-v2-hero-button{position:absolute;top:14px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:0;border-radius:50%;background:rgba(255,255,255,.92);color:var(--color-ink);cursor:pointer;box-shadow:0 2px 8px rgba(31,41,35,.08);}
+.detail-v2-hero-button.back{left:12px;}.detail-v2-hero-button.share{right:12px;}
+.detail-v2-hero-button .material-symbols-outlined{font-size:24px;}
+.detail-v2-body{display:flex;flex-direction:column;gap:12px;padding:12px 16px 32px;}
+.detail-v2-card{width:100%;border:1px solid var(--color-border);border-radius:18px;background:#fff;overflow:hidden;}
+.detail-v2-core{height:166px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;}
+.detail-v2-topline,.detail-v2-titleline{display:flex;align-items:center;justify-content:space-between;min-width:0;}
+.detail-v2-topline{height:28px;}.detail-v2-titleline{height:30px;}
+.detail-v2-status{height:28px;padding:0 18px;display:inline-flex;align-items:center;border-radius:14px;background:#E8EFEA;color:var(--color-pine);font-size:13px;line-height:19px;font-weight:600;white-space:nowrap;}
+.detail-v2-status.today{background:#FFE0D2;color:#B7371B;}.detail-v2-status.night{background:#E7E9F5;color:#435391;}.detail-v2-status.daily{background:#FFF0CD;color:#8B5900;}.detail-v2-status.ended{background:#F1EEE8;color:#70756E;}
+.detail-v2-distance{font-size:13px;line-height:19px;color:#657067;}
+.detail-v2-title{font:700 21px/30px 'Noto Serif SC','Songti SC',serif;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.detail-v2-cert{height:26px;padding:0 16px;display:inline-flex;align-items:center;border-radius:13px;background:#F7E8C5;color:#8E5F1F;font-size:12px;line-height:17px;font-weight:600;white-space:nowrap;}
+.detail-v2-meta,.detail-v2-rule,.detail-v2-next{margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.detail-v2-meta{font-size:13px;line-height:19px;color:#657067;}.detail-v2-rule{font-size:14px;line-height:20px;font-weight:600;color:var(--color-ink);}.detail-v2-next{font-size:13px;line-height:19px;color:var(--color-brand);}
+.detail-v2-actions{height:64px;padding:5px 8px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;border:0;border-radius:16px;background:#fff;overflow:hidden;}
+.detail-v2-action{min-width:44px;min-height:54px;border:0;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font:600 12px/17px 'Noto Sans SC',sans-serif;cursor:pointer;}
+.detail-v2-action .material-symbols-outlined{font-size:20px;line-height:24px;}
+.detail-v2-action.favorite{background:#FFF0E6;color:var(--color-brand);}.detail-v2-action.navigate{background:#EAF1EC;color:var(--color-pine);}.detail-v2-action.share{background:#F3F1EC;color:#475149;}
+.detail-v2-calendar{height:268px;padding:12px 14px;border-radius:16px;}
+.detail-v2-section-title{height:28px;display:flex;align-items:flex-start;justify-content:space-between;}
+.detail-v2-section-title h3{font:700 17px/25px 'Noto Serif SC','Songti SC',serif;color:var(--color-ink);}
+.detail-v2-section-title span{font-size:13px;line-height:19px;color:#657067;}
+.detail-v2-week,.detail-v2-days{display:grid;grid-template-columns:repeat(7,39px);gap:6px;}
+.detail-v2-week{height:20px;margin-top:6px;}.detail-v2-week span{display:flex;align-items:center;justify-content:center;color:#8A918B;font-size:12px;line-height:17px;font-weight:600;}
+.detail-v2-days{grid-auto-rows:32px;margin-top:6px;}
+.detail-v2-day{position:relative;width:39px;height:32px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#475149;font-size:12px;line-height:17px;}
+.detail-v2-day.open{background:var(--color-brand);color:#fff;font-size:11px;font-weight:700;line-height:14px;}
+.detail-v2-calendar.temple .detail-v2-day.open{background:#C78A28;}
+.detail-v2-day.open small{font-size:8px;line-height:9px;font-weight:400;}.detail-v2-day.today:not(.open){color:var(--color-brand);}.detail-v2-day.blank{visibility:hidden;}
+.detail-v2-calendar-note{display:none;padding:36px 20px;text-align:center;color:#72766F;font-size:13px;line-height:20px;}
+.detail-v2-map{height:112px;padding:12px 14px;display:flex;align-items:center;border:0;background:#EAF1EC;border-radius:16px;}
+.detail-v2-map-icon{width:50px;height:50px;border-radius:50%;background:var(--color-brand);color:#fff;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+.detail-v2-map-icon .material-symbols-outlined{font-size:24px;}.detail-v2-map-copy{min-width:0;margin-left:14px;flex:1;}.detail-v2-map-name{font:700 15px/22px 'Noto Serif SC','Songti SC',serif;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.detail-v2-map-address{font-size:12px;line-height:18px;color:#657067;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.detail-v2-map-button{width:72px;height:44px;border:0;border-radius:14px;background:var(--color-pine);color:#fff;font:600 14px/20px 'Noto Sans SC',sans-serif;cursor:pointer;}
+.detail-v2-reviews{padding:12px 14px;border-radius:16px;}
+.detail-v2-review-head{height:28px;display:flex;align-items:flex-start;justify-content:space-between;}.detail-v2-review-head h3{font:700 17px/25px 'Noto Serif SC','Songti SC',serif;color:var(--color-ink);}.detail-v2-write{min-width:44px;min-height:28px;padding:0 2px;border:0;background:transparent;color:var(--color-brand);font:500 13px/19px 'Noto Sans SC',sans-serif;cursor:pointer;}.detail-v2-write.review-note{color:#C78A28;cursor:default;}
+.detail-v2-rating{height:46px;margin-top:6px;padding:5px 12px;border-radius:12px;background:#FFF3ED;display:flex;align-items:center;gap:12px;}.detail-v2-score{font:500 28px/36px 'Noto Sans SC',sans-serif;color:var(--color-brand);}.detail-v2-score-copy{font-size:13px;line-height:19px;color:#657067;}.detail-v2-keywords{display:flex;gap:6px;margin-top:8px;overflow:hidden;}.detail-v2-keywords span{height:26px;padding:0 14px;border-radius:13px;background:#F3F1EC;color:#596159;display:inline-flex;align-items:center;white-space:nowrap;font-size:12px;line-height:17px;}
+.detail-v2-review-list{display:flex;flex-direction:column;gap:8px;margin-top:8px;}.detail-v2-review-item{min-height:76px;padding:8px 10px;border-radius:12px;background:#FAF9F6;}.detail-v2-review-meta{display:flex;align-items:center;justify-content:space-between;font-size:13px;line-height:19px;font-weight:600;color:var(--color-ink);}.detail-v2-review-kind{color:#C78A28;font-size:12px;font-weight:500;}.detail-v2-review-text{margin-top:3px;color:#657067;font-size:13px;line-height:20px;}.detail-v2-review-disclaimer{margin-top:6px;color:#9A7A45;font-size:11px;line-height:16px;}
+.detail-v2-empty{min-height:292px;display:flex;flex-direction:column;align-items:center;text-align:center;padding:14px 16px 12px;}.detail-v2-empty-mark{width:82px;height:82px;border-radius:26px;background:#FFF0E6;color:var(--color-brand);display:flex;align-items:center;justify-content:center;margin-top:8px;}.detail-v2-empty-mark .material-symbols-outlined{font-size:36px;}.detail-v2-empty-title{margin-top:12px;font:700 17px/25px 'Noto Serif SC','Songti SC',serif;color:var(--color-ink);}.detail-v2-empty-copy{margin-top:8px;color:#737A73;font-size:13px;line-height:21px;}.detail-v2-empty-button{width:172px;height:46px;margin-top:12px;border:0;border-radius:15px;background:var(--color-brand);color:#fff;font:600 15px/22px 'Noto Sans SC',sans-serif;cursor:pointer;}
+.detail-v2-hero-button:focus-visible,.detail-v2-action:focus-visible,.detail-v2-map-button:focus-visible,.detail-v2-write:focus-visible,.detail-v2-empty-button:focus-visible{outline:2px solid var(--color-brand);outline-offset:2px;}
+
 
 
 </style>
@@ -2923,6 +2977,59 @@ body.map-preview .app-status-preview{display:flex;background:rgba(255,255,255,.9
       <!-- DETAIL + REVIEWS PAGE -->
 
       <div id="user-page-detail" class="hidden">
+
+        <div class="detail-v2-shell">
+          <header class="detail-v2-hero" id="detail-v2-hero">
+            <button class="detail-v2-hero-button back" type="button" onclick="closeDetail()" aria-label="返回">
+              <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+            </button>
+            <button class="detail-v2-hero-button share" type="button" onclick="shareMarket()" aria-label="分享集市">
+              <span class="material-symbols-outlined" aria-hidden="true">north_east</span>
+            </button>
+          </header>
+
+          <main class="detail-v2-body">
+            <section class="detail-v2-card detail-v2-core" aria-labelledby="detail-v2-title">
+              <div class="detail-v2-topline">
+                <span class="detail-v2-status" id="detail-v2-status">明天开集</span>
+                <span class="detail-v2-distance" id="detail-v2-distance">2.8 km</span>
+              </div>
+              <div class="detail-v2-titleline">
+                <h1 class="detail-v2-title" id="detail-v2-title">李官大集</h1>
+                <span class="detail-v2-cert" id="detail-v2-cert">当地特色</span>
+              </div>
+              <p class="detail-v2-meta" id="detail-v2-meta">大集 · 临沂市兰山区李官镇驻地</p>
+              <p class="detail-v2-rule" id="detail-v2-rule">阴历逢一、逢六 · 07:00–13:00</p>
+              <p class="detail-v2-next" id="detail-v2-next">下次开集：明天 · 07:00开始</p>
+            </section>
+
+            <nav class="detail-v2-actions" aria-label="集市操作">
+              <button class="detail-v2-action favorite" id="detail-v2-favorite" type="button" onclick="toggleFavBtn()"><span class="material-symbols-outlined" aria-hidden="true">favorite</span><span>收藏提醒</span></button>
+              <button class="detail-v2-action navigate" type="button" onclick="openAmapNavigation()"><span class="material-symbols-outlined" aria-hidden="true">my_location</span><span>导航</span></button>
+              <button class="detail-v2-action share" type="button" onclick="shareMarket()"><span class="material-symbols-outlined" aria-hidden="true">north_east</span><span>分享</span></button>
+            </nav>
+
+            <section class="detail-v2-card detail-v2-calendar" aria-labelledby="detail-v2-calendar-title">
+              <div class="detail-v2-section-title"><h3 id="detail-v2-calendar-title">本月开集日</h3><span id="detail-v2-calendar-month">2026年7月</span></div>
+              <div id="detail-v2-calendar-content">
+                <div class="detail-v2-week" aria-hidden="true"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+                <div class="detail-v2-days" id="detail-v2-days"></div>
+              </div>
+              <div class="detail-v2-calendar-note" id="detail-v2-calendar-note">集期待人工复核，暂不展示开集日</div>
+            </section>
+
+            <section class="detail-v2-map" aria-label="集市位置">
+              <div class="detail-v2-map-icon"><span class="material-symbols-outlined" aria-hidden="true">my_location</span></div>
+              <div class="detail-v2-map-copy"><div class="detail-v2-map-name" id="detail-v2-map-name">李官大集</div><div class="detail-v2-map-address" id="detail-v2-map-address">山东省临沂市兰山区</div></div>
+              <button class="detail-v2-map-button" type="button" onclick="openAmapNavigation()">去导航</button>
+            </section>
+
+            <section class="detail-v2-card detail-v2-reviews" aria-labelledby="detail-v2-review-title">
+              <div class="detail-v2-review-head"><h3 id="detail-v2-review-title">用户评价</h3><button class="detail-v2-write" type="button" onclick="openWriteReview()">写评价</button></div>
+              <div id="detail-v2-review-content"></div>
+            </section>
+          </main>
+        </div>
 
         <div class="detail-hero" id="detail-hero" style="background:linear-gradient(135deg,#FFF4E0,#FFE0A0);">
 
@@ -7349,6 +7456,154 @@ function _updateCategoryList(cats) {
 
 
 
+(function detailV2Runtime(){
+  const PREVIEW_TODAY = '2026-07-13';
+  const FULL_OPEN_DAYS = [
+    {date:'2026-07-05',lunar_label:'廿一'}, {date:'2026-07-10',lunar_label:'廿六'},
+    {date:'2026-07-14',lunar_label:'初一'}, {date:'2026-07-19',lunar_label:'初六'},
+    {date:'2026-07-24',lunar_label:'十一'}, {date:'2026-07-29',lunar_label:'十六'}
+  ];
+
+  window.renderDetailV2Calendar = function(year, month, openDays, todayIso){
+    const daysEl = document.getElementById('detail-v2-days');
+    const monthEl = document.getElementById('detail-v2-calendar-month');
+    const content = document.getElementById('detail-v2-calendar-content');
+    const note = document.getElementById('detail-v2-calendar-note');
+    if (!daysEl) return;
+    if (monthEl) monthEl.textContent = `${year}年${month}月`;
+    if (content) content.style.display = '';
+    if (note) note.style.display = 'none';
+    const openByDate = new Map((openDays || []).map(item => [item.date,item]));
+    const firstWeekday = new Date(Date.UTC(year,month-1,1)).getUTCDay();
+    const blanks = (firstWeekday + 6) % 7;
+    const dayCount = new Date(Date.UTC(year,month,0)).getUTCDate();
+    const cells = [];
+    for (let i=0;i<blanks;i++) cells.push('<span class="detail-v2-day blank" aria-hidden="true"></span>');
+    for (let day=1;day<=dayCount;day++) {
+      const iso = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      const item = openByDate.get(iso);
+      const classes = ['detail-v2-day'];
+      if (item) classes.push('open');
+      if (iso === todayIso) classes.push('today');
+      cells.push(`<span class="${classes.join(' ')}" aria-label="${month}月${day}日${item ? '，开集，阴历'+item.lunar_label : ''}"><span>${day}</span>${item ? `<small>${item.lunar_label || ''}</small>` : ''}</span>`);
+    }
+    daysEl.innerHTML = cells.join('');
+  };
+
+  window.renderDetailV2CalendarUnavailable = function(message){
+    const content = document.getElementById('detail-v2-calendar-content');
+    const note = document.getElementById('detail-v2-calendar-note');
+    if (content) content.style.display = 'none';
+    if (note) { note.style.display = 'block'; note.textContent = message || '集期待人工复核，暂不展示开集日'; }
+  };
+
+  function detailStatus(market){
+    const label = market.statusLabel || market.status_label || '';
+    const status = market.scheduleStatus || market.schedule_status || '';
+    if (/今日已结束/.test(label) || status === 'ended_today') return {label:'今日已结束',cls:'ended'};
+    if (/今晚/.test(label)) return {label:'今晚开市',cls:'night'};
+    if (/今天/.test(label) || status === 'today') return {label:'今天有集',cls:'today'};
+    if (/每日/.test(label) || status === 'daily') return {label:'每日营业',cls:'daily'};
+    if (/明天/.test(label) || status === 'tomorrow') return {label:'明天开集',cls:''};
+    return {label:label || '集期待核实',cls:''};
+  }
+
+  function detailTimeSlot(market){
+    const value = market.openTime || market.open_time || {};
+    const slot = value?.time_slots?.[0];
+    return slot?.start && slot?.end ? `${slot.start}–${slot.end}` : '';
+  }
+
+  window.renderDetailV2Base = function(market){
+    if (!market) return;
+    const status = detailStatus(market);
+    const statusEl = document.getElementById('detail-v2-status');
+    if (statusEl) { statusEl.textContent = status.label; statusEl.className = `detail-v2-status ${status.cls}`.trim(); }
+    const distanceMeters = market.distanceMeters ?? market.distance ?? (market.dist != null ? Number(market.dist)*1000 : null);
+    setText('detail-v2-distance', distanceMeters == null ? '距离待定位' : formatDistanceMeters(distanceMeters));
+    setText('detail-v2-title', market.name || '集市详情');
+    setText('detail-v2-map-name', market.name || '集市详情');
+    const category = _homePrimaryCategory(market);
+    document.querySelector('.detail-v2-calendar')?.classList.toggle('temple', category === '庙会');
+    const address = _fullAddr(market) || market.address || market.region || '地址待补充';
+    const detailAddress = market.detailAddress || address;
+    setText('detail-v2-meta', `${category} · ${detailAddress}`);
+    setText('detail-v2-map-address', market.region || address);
+    const tags = Array.isArray(market.tags) ? market.tags : [];
+    const cert = document.getElementById('detail-v2-cert');
+    if (cert) cert.style.display = tags.some(tag => ['当地特色','特色认证'].includes(tag)) ? '' : 'none';
+    const rule = market.homeScheduleText || market.scheduleText || formatScheduleTag(market.openTime || market.open_time) || market.time || '集期待核实';
+    const slot = detailTimeSlot(market);
+    setText('detail-v2-rule', slot && !rule.includes(slot) ? `${rule} · ${slot}` : rule);
+    const next = market.next_open_date || market.nextOpenDate;
+    let nextText = '集期待核实后显示';
+    if (status.label === '明天开集') nextText = `下次开集：明天${slot ? ' · '+slot.split('–')[0]+'开始' : ''}`;
+    else if (status.label === '今天有集' || status.label === '今晚开市') nextText = `今天开集${slot ? ' · '+slot : ''}`;
+    else if (status.label === '每日营业') nextText = '每日营业 · 特殊天气及通知除外';
+    else if (next) { const d = new Date(next+'T00:00:00+08:00'); nextText = `下次开集：${d.getMonth()+1}月${d.getDate()}日`; }
+    setText('detail-v2-next', nextText);
+    const favorite = document.getElementById('detail-v2-favorite');
+    if (favorite) favorite.classList.toggle('is-saved', isMarketFaved(market.id));
+  };
+
+  window.loadDetailV2Calendar = async function(market){
+    const preview = new URLSearchParams(location.search).get('preview');
+    if (preview === 'detail-full') { renderDetailV2Calendar(2026,7,FULL_OPEN_DAYS,PREVIEW_TODAY); return; }
+    if (preview === 'detail-empty') { renderDetailV2Calendar(2026,7,[{date:'2026-07-14',lunar_label:''}],PREVIEW_TODAY); return; }
+    const now = new Date();
+    try {
+      const response = await fetch(`/api/markets/${encodeURIComponent(market.id)}/calendar?year=${now.getFullYear()}&month=${now.getMonth()+1}`);
+      const payload = await response.json();
+      if (!response.ok || payload.code !== 200) throw new Error(payload.msg || '日历加载失败');
+      renderDetailV2Calendar(payload.data.year,payload.data.month,payload.data.open_days,new Date().toISOString().slice(0,10));
+    } catch (error) {
+      renderDetailV2CalendarUnavailable(error.message.includes('人工复核') ? error.message : '开集日历暂时无法加载');
+    }
+  };
+
+  window.renderDetailV2Reviews = function(stats, reviews, previewEmpty=false){
+    const root = document.getElementById('detail-v2-review-content');
+    const write = document.querySelector('.detail-v2-write');
+    if (!root) return;
+    const total = Number(stats?.total || reviews?.length || 0);
+    if (previewEmpty || !total) {
+      if (write) { write.textContent = '评价需审核'; write.classList.add('review-note'); }
+      root.innerHTML = `<div class="detail-v2-empty"><div class="detail-v2-empty-mark"><span class="material-symbols-outlined" aria-hidden="true">hotel_class</span></div><div class="detail-v2-empty-title">暂无评价，来分享你的赶集体验</div><p class="detail-v2-empty-copy">上传文字、图片或视频后，将由管理员审核；审核通过后公开展示。</p><button class="detail-v2-empty-button" type="button" onclick="openWriteReview()">写第一条评价</button></div>`;
+      return;
+    }
+    if (write) { write.textContent = '写评价'; write.classList.remove('review-note'); }
+    const avg = Number(stats?.avg || 4.8).toFixed(1);
+    const sample = (reviews || []).slice(0,2);
+    const fallback = [
+      {userNick:'旅行的阿宁',content:'花生油和山货很多，摊主愿意讲当地吃法。',kind:'图文'},
+      {userNick:'本地老李',content:'早上八点最热闹，停车建议放在镇口。',kind:'视频'}
+    ];
+    const rows = (sample.length ? sample : fallback).map((item,index) => `<article class="detail-v2-review-item"><div class="detail-v2-review-meta"><span>${_homeEscape(item.userNick || item.user || '匿名用户')} · 示例评价</span><span class="detail-v2-review-kind">${_homeEscape(item.kind || (item.images?.length ? '图文' : index ? '视频' : '文字'))}</span></div><p class="detail-v2-review-text">${_homeEscape(item.content || item.text || '')}</p></article>`).join('');
+    root.innerHTML = `<div class="detail-v2-rating"><span class="detail-v2-score">${avg}</span><span class="detail-v2-score-copy">${total}条已审核评价</span></div><div class="detail-v2-keywords"><span>土货多</span><span>价格实在</span><span>停车方便</span></div><div class="detail-v2-review-list">${rows}</div><div class="detail-v2-review-disclaimer">以上评价在预览态为示例数据；正式内容仅展示审核通过记录。</div>`;
+  };
+
+  window.applyDetailV2PreviewState = function(){
+    const mode = new URLSearchParams(location.search).get('preview');
+    if (!['detail-full','detail-empty'].includes(mode)) return false;
+    document.body.classList.add('home-preview','detail-preview','detail-v2-active');
+    showScreen('user-screen');
+    document.querySelectorAll('[id^="user-page-"]').forEach(page => page.classList.add('hidden'));
+    document.getElementById('user-page-detail')?.classList.remove('hidden');
+    const time = document.getElementById('home-preview-time');
+    if (time) time.textContent = '09:26';
+    const empty = mode === 'detail-empty';
+    currentMarket = empty ? {
+      id:'preview-yizhou-detail',name:'沂州古城庙会',cat:'庙会',region:'山东省临沂市兰山区',address:'沂州古城',distanceMeters:9100,statusLabel:'明天开集',scheduleStatus:'tomorrow',homeScheduleText:'指定日期 · 7月14日、10月2日',next_open_date:'2026-07-14',openTime:{time_slots:[{start:'07:00',end:'13:00'}]},tags:['当地特色']
+    } : {
+      id:'preview-li-guan-detail',name:'李官大集',cat:'农村大集',region:'山东省临沂市兰山区',address:'李官镇驻地',detailAddress:'临沂市兰山区李官镇驻地',distanceMeters:2800,statusLabel:'明天开集',scheduleStatus:'tomorrow',homeScheduleText:'阴历逢一、逢六',next_open_date:'2026-07-14',openTime:{time_slots:[{start:'07:00',end:'13:00'}]},tags:['当地特色']
+    };
+    renderDetailV2Base(currentMarket);
+    loadDetailV2Calendar(currentMarket);
+    renderDetailV2Reviews(empty ? {total:0,avg:0} : {total:126,avg:4.8},[],empty);
+    return true;
+  };
+})();
+
 (async function loadApiData() {
 
   const homePreviewMode = new URLSearchParams(location.search).get('preview') || '';
@@ -7358,6 +7613,10 @@ function _updateCategoryList(cats) {
   }
   if (['map-default','map-raised'].includes(homePreviewMode)) {
     setTimeout(applyMapV2PreviewState, 0);
+    return;
+  }
+  if (['detail-full','detail-empty'].includes(homePreviewMode)) {
+    setTimeout(applyDetailV2PreviewState, 0);
     return;
   }
 
@@ -14016,6 +14275,8 @@ function _getActivePage() {
 
 function closeDetail() {
 
+  document.body.classList.remove('detail-v2-active','detail-preview');
+
   if (_detailFromPage === 'search') {
 
     // 还原搜索页（搜索页用 display 而非 hidden class 控制）
@@ -14045,6 +14306,9 @@ async function openMarketDetail(market) {
   _detailFromPage = _getActivePage();
 
   currentMarket = market;
+
+  document.body.classList.add('detail-v2-active');
+  renderDetailV2Base(market);
 
   // Set hero
 
@@ -14171,6 +14435,8 @@ async function openMarketDetail(market) {
   // Switch page first for instant response
 
   switchUserPage('detail');
+
+  loadDetailV2Calendar(market);
 
   // Load real rating stats & reviews from API
 
@@ -14347,10 +14613,12 @@ async function _loadMarketReviews(marketId) {
       if (tabs[3]) tabs[3].textContent = `💬 纯文字${txtCnt > 0 ? ' ' + txtCnt : ''}`;
 
       renderReviews(mapped);
+      renderDetailV2Reviews(statsRes.code === 200 ? statsRes.data : null, list);
 
     } else {
 
       renderReviews([]);
+      renderDetailV2Reviews(statsRes.code === 200 ? statsRes.data : null, []);
 
     }
 
@@ -14361,6 +14629,7 @@ async function _loadMarketReviews(marketId) {
     setText('detail-review-count', '加载失败');
 
     renderReviews([]);
+    renderDetailV2Reviews(null, []);
 
   }
 

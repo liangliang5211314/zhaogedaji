@@ -6,7 +6,7 @@ import os, json, uuid, sqlite3, hashlib, hmac, random, time, re, logging, math
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, request, jsonify, send_from_directory
-from open_time import OpenTimeValidationError, compute_open_time
+from open_time import OpenTimeValidationError, compute_month_calendar, compute_open_time
 
 # ── 配置 & 日志（优先于其他模块）────────────────────────────
 try:
@@ -1797,6 +1797,36 @@ def get_market(market_id):
     d = dict(row)
     d['tags'] = json.loads(d.get('tags') or '[]')
     return ok(d)
+
+
+@app.route('/api/markets/<market_id>/calendar', methods=['GET'])
+def get_market_calendar(market_id):
+    """派生某个阳历月份的开集日；阴历规则在服务端完成换算。"""
+    try:
+        year = int(request.args.get('year', datetime.now().year))
+        month = int(request.args.get('month', datetime.now().month))
+    except (TypeError, ValueError):
+        return err('year 或 month 参数无效', 400)
+
+    conn = get_db()
+    row = conn.execute(
+        "SELECT open_time FROM markets WHERE id=? AND status='published'",
+        (market_id,),
+    ).fetchone()
+    conn.close()
+    if not row:
+        return err('未找到', 404)
+
+    try:
+        value = json.loads(row['open_time'] or '{}')
+        calendar_data = compute_month_calendar(value, year, month)
+    except (OpenTimeValidationError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        return jsonify({
+            'code': 422,
+            'msg': '集期需要人工复核，暂不生成日历',
+            'errors': getattr(exc, 'errors', [str(exc)]),
+        }), 422
+    return ok(calendar_data)
 
 
 @app.route('/api/stats', methods=['GET'])

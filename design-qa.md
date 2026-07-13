@@ -99,3 +99,54 @@ passed
 ### final result
 
 passed
+
+---
+
+## 集市详情页两态
+
+- 设计源：Figma `3u4j48Ti8r2Er7gipvfAJT`，节点 `21:11`、`21:14`
+- 画板：375 × 1220
+- 预览入口：`?preview=detail-full`、`?preview=detail-empty`
+
+| 状态 | 设计截图 | 实现截图 | 并排对比 |
+| --- | --- | --- | --- |
+| 完整态 | `output/frontend-detail/reference-detail-full.png` | `output/frontend-detail/implementation-detail-full.png` | `output/frontend-detail/comparison-detail-full.png` |
+| 无评价态 | `output/frontend-detail/reference-detail-empty.png` | `output/frontend-detail/implementation-detail-empty.png` | `output/frontend-detail/comparison-detail-empty.png` |
+
+### Findings
+
+- 无遗留 P0 / P1 / P2 问题。
+- P3：操作区使用正式 Material Symbols，字形与 Figma 草稿的文本图标占位略有差异，含义、热区与对齐均一致。
+- P3：无评价态图标使用正式 `hotel_class` 图标替代草稿中的抽象星形，占位尺寸与色彩一致。
+
+### 五项保真检查
+
+- 字体与排版：通过。标题使用 Noto Serif SC，正文使用 Noto Sans SC；集期规律为 14px，次要信息不低于 13px。
+- 间距与布局：通过。头图 180px、核心信息卡 166px、动作栏 64px、日历 268px、地图卡 112px，与 375px Figma frame 同构。
+- 色彩与 tokens：通过。明天开集使用深松绿浅底；阴历集期使用暖陶红高亮，庙会指定日期使用稻谷金衍生色；所有状态均带文字。
+- 图像与图标：通过。详情头图复用已验收 Figma 示例头图的栅格资产；操作图标统一使用 Material Symbols，无 emoji、手绘 SVG 或 CSS 图形资产。
+- 文案与数据：通过。李官大集统一命名；2026-07-13 不标今天有集，下一场为 7 月 14 日；庙会指定日期 7 月 14 日与 10 月 2 日自洽；示例评价均明确标注。
+
+### 历法与运行时检查
+
+- 新增 `GET /api/markets/:id/calendar?year=&month=`，服务端调用统一 `compute_month_calendar`，前端不自行把阴历日序当阳历日。
+- 李官大集 2026 年 7 月开集日回归为 5、10、14、19、24、29 日，对应阴历廿一、廿六、初一、初六、十一、十六。
+- `migration_status=needs_review` 返回 422，不生成月历；前端展示“集期待人工复核”。
+- 无评价完整文案为“暂无评价，来分享你的赶集体验”；卡片短文案仍保持“暂无评价”。
+- 评价区仅承诺展示审核通过内容，预览评价显式标记为示例数据。
+
+### 状态与交互检查
+
+- 返回、分享、收藏提醒、导航、写评价均为可操作控件；所有主要按钮热区不小于 44 × 44px。
+- 完整态展示综合评分、关键词和图文/视频示例评价；无评价态展示审核说明和“写第一条评价”主按钮。
+- 两个预览入口控制台均无 error；全量 pytest `37 passed`。
+
+### Comparison history
+
+1. 首轮实现沿用了旧详情页的信息块和评分分布，重排为核心信息、动作栏、月历、地图、评价五段结构。
+2. 首轮对照发现指定日期庙会仍使用暖陶红高亮，修正为稻谷金衍生色；无评价态补齐“评价需审核”和当地特色第二槽。
+3. 修正后以同一 375 × 1220 画板重采两态，并与 Figma 原节点并排复核；未发现新的 P0 / P1 / P2 差异。
+
+### final result
+
+passed
