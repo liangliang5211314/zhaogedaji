@@ -54,3 +54,48 @@
 ## final result
 
 passed
+
+---
+
+## 地图页 C 两态
+
+- 设计源：Figma `3u4j48Ti8r2Er7gipvfAJT`，节点 `12:8`、`12:11`
+- 视口：375 × 812
+- 预览入口：`?preview=map-default`、`?preview=map-raised`
+
+| 状态 | 设计截图 | 实现截图 | 并排对比 |
+| --- | --- | --- | --- |
+| 地图默认 | `output/frontend-map/reference-map-default.png` | `output/frontend-map/implementation-map-default.png` | `output/frontend-map/comparison-map-default.png` |
+| 列表拖起 | `output/frontend-map/reference-map-raised.png` | `output/frontend-map/implementation-map-raised.png` | `output/frontend-map/comparison-map-raised.png` |
+
+### Findings
+
+- 无遗留 P0 / P1 / P2 问题。
+- P3：实现使用真实高德底图，Figma 使用抽象街区占位图；真实道路、POI 标签和版权标识属于预期生产差异。
+- P3：系统状态栏电量示例由 Figma 的 88% 调整为预览统一值 92%，不影响应用布局。
+
+### 五项保真检查
+
+- 字体与排版：通过。标题使用 Noto Serif SC，控件与卡片信息使用 Noto Sans SC；次要信息保持 13px 下限。
+- 间距与布局：通过。搜索栏全局 Y=36、高 48px；默认抽屉全局 Y=500，拖起态全局 Y=170；定位按钮随抽屉同步上移。
+- 色彩与 tokens：通过。大集/早市/庙会/夜市标记分别使用暖陶红、深松绿、稻谷金衍生色、夜市蓝紫；标签均带文字。
+- 图像与图标：通过。底图使用高德 JS API；操作图标统一 Material Symbols，无 emoji、手绘 SVG 或 CSS 图形代替地图资产。
+- 文案与数据：通过。分类 chips 两态完全同构；“只看今天”保持独立维度；650 m、2.8 km、6.3 km、9.1 km 格式正确。
+
+### 状态与交互检查
+
+- 默认态：附近集市标题、五分类、独立开关、卡片列表与地图标记正常。
+- 拖起态：抽屉 top=146px（加 24px 状态栏后全局 Y=170），标题为“18 个附近集市”，四张卡片完整可见。
+- 收藏按钮实测 44 × 44px；地图搜索、返回、定位、地区选择热区均不小于 44px。
+- “只看今天”开启后由 4 张筛为 3 张；再选“夜市”后仅显示“半程夜市”，地图标记同步刷新。
+- 抽屉支持点击手柄与指针拖拽，超过 40px 后在默认/拖起两个锚点间吸附。
+
+### Comparison history
+
+1. 首轮对照发现收藏按钮缺少 Figma 中的暖色圆形底，评分与集期挤在同一行；修正为 44px 暖色收藏按钮，评分独立右对齐。
+2. raised 预览标题曾按示例卡片数显示“4 个附近集市”；修正为与设计稿一致的“18 个附近集市”，生产态仍使用真实筛选数量。
+3. 修正后重新在 375 × 812 视口采集两态并排图；未发现新的 P0 / P1 / P2 差异。
+
+### final result
+
+passed

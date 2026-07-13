@@ -1929,6 +1929,79 @@ body.home-preview .app-status-preview{display:flex;}
   #user-screen .user-app{box-shadow:0 14px 48px rgba(43,36,28,.16);}
 }
 
+/* ═══════════════════════════════════════════════════════════
+   APP V2 · 地图页 C（Figma 02）
+   ═══════════════════════════════════════════════════════════ */
+body.map-preview{background:#F1EEE8;}
+body.map-preview #user-screen .user-app{border-radius:24px;}
+body.map-preview .app-status-preview{display:flex;background:rgba(255,255,255,.94);color:var(--color-ink);}
+.map-v2-shell{display:none;position:relative;width:100%;height:100%;overflow:hidden;background:#DCE4DC;}
+.map-v2-active #user-screen .user-top-bar,
+.map-v2-active #user-screen .user-bottom-nav{display:none!important;}
+.map-v2-active #user-screen .user-scroll-body{overflow:hidden;}
+.map-v2-active #user-page-nearby{height:100%;}
+.map-v2-active #user-page-nearby>.map-v2-shell{display:block;}
+.map-v2-active #user-page-nearby>:not(.map-v2-shell){display:none!important;}
+.map-v2-canvas{position:absolute;inset:0;background:#DCE4DC;}
+.map-v2-searchbar{
+  position:absolute;z-index:20;top:12px;left:16px;width:calc(100% - 32px);height:48px;
+  display:flex;align-items:center;padding:0 8px;border-radius:16px;background:#fff;
+  box-shadow:0 5px 18px rgba(31,41,35,.13);
+}
+.map-v2-back,.map-v2-search-action,.map-v2-locate{
+  min-width:44px;min-height:44px;border:0;background:transparent;color:var(--color-ink);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:14px;
+}
+.map-v2-back .material-symbols-outlined,.map-v2-search-action .material-symbols-outlined{font-size:22px;}
+.map-v2-search-action{flex:1;justify-content:flex-start;gap:8px;color:#72766F;font:400 15px/22px 'Noto Sans SC',sans-serif;text-align:left;}
+.map-v2-filter-place{height:32px;padding:0 8px;display:flex;align-items:center;gap:1px;border:0;border-left:1px solid var(--color-border);background:transparent;color:#586059;font:600 13px/19px 'Noto Sans SC',sans-serif;cursor:pointer;}
+.map-v2-filter-place .material-symbols-outlined{font-size:17px;}
+.map-v2-locate{
+  position:absolute;z-index:20;right:16px;bottom:330px;width:48px;height:48px;min-width:48px;min-height:48px;
+  border-radius:16px;background:#fff;box-shadow:0 4px 14px rgba(31,41,35,.16);transition:bottom .28s ease;
+}
+.map-v2-locate .material-symbols-outlined{font-size:23px;color:var(--color-pine);}
+.map-v2-shell.is-raised .map-v2-locate{bottom:656px;}
+.map-v2-sheet{
+  position:absolute;z-index:30;left:0;right:0;top:476px;height:calc(100% - 146px);padding:0 16px 24px;
+  border-radius:24px 24px 0 0;background:var(--color-paper);box-shadow:0 -8px 28px rgba(31,41,35,.15);
+  transform:translateY(0);transition:top .28s ease;touch-action:none;
+}
+.map-v2-shell.is-raised .map-v2-sheet{top:146px;}
+.map-v2-handle-button{width:100%;height:28px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;cursor:grab;}
+.map-v2-handle-button::after{content:'';width:40px;height:4px;border-radius:2px;background:#D4D0C8;}
+.map-v2-sheet-head{height:40px;display:flex;align-items:center;justify-content:space-between;}
+.map-v2-sheet-title{font-family:'Noto Serif SC','Songti SC',serif;font-size:18px;line-height:27px;font-weight:700;color:var(--color-ink);}
+.map-v2-today-control{min-height:44px;display:flex;align-items:center;gap:8px;color:#59615A;font-size:13px;line-height:19px;cursor:pointer;}
+.map-v2-today-control input{position:absolute;opacity:0;pointer-events:none;}
+.map-v2-switch{position:relative;width:42px;height:24px;border-radius:12px;background:#D7D7D2;transition:background .2s;}
+.map-v2-switch::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2);transition:left .2s;}
+.map-v2-today-control input:checked+.map-v2-switch{background:var(--color-pine);}
+.map-v2-today-control input:checked+.map-v2-switch::after{left:21px;}
+.map-v2-chips{height:42px;display:flex;align-items:flex-start;gap:8px;overflow-x:auto;scrollbar-width:none;}
+.map-v2-chips::-webkit-scrollbar{display:none;}
+.map-v2-chip{height:34px;min-width:58px;padding:0 15px;flex:0 0 auto;border:1px solid var(--color-border);border-radius:17px;background:#fff;color:#424941;font:500 14px/20px 'Noto Sans SC',sans-serif;cursor:pointer;}
+.map-v2-chip.active{border-color:var(--color-pine);background:var(--color-pine);color:#fff;font-weight:600;}
+.map-v2-list{height:calc(100% - 110px);overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:2px 0 18px;scrollbar-width:none;touch-action:pan-y;}
+.map-v2-list::-webkit-scrollbar{display:none;}
+.map-v2-card{position:relative;min-height:108px;padding:10px 12px;border:1px solid var(--color-border);border-radius:16px;background:#fff;box-shadow:0 3px 10px rgba(46,38,28,.06);cursor:pointer;}
+.map-v2-card-top{height:26px;display:flex;align-items:center;gap:8px;}
+.map-v2-card-status{height:26px;padding:0 12px;display:inline-flex;align-items:center;border-radius:13px;font-size:13px;line-height:19px;font-weight:600;white-space:nowrap;}
+.map-v2-card-status.today{background:#FFE0D2;color:#B7371B;}.map-v2-card-status.daily{background:#FFF0CD;color:#8B5900;}.map-v2-card-status.tomorrow{background:#E8EFEA;color:#2F5D43;}.map-v2-card-status.night{background:#E7E9F5;color:#435391;}.map-v2-card-status.category{background:#F1EEE8;color:#535951;}
+.map-v2-card-distance{margin-left:auto;margin-right:48px;color:#777C75;font-size:13px;line-height:19px;}
+.map-v2-card-fav{position:absolute;right:5px;top:1px;width:44px;height:44px;border:0;background:#FFF5EF;display:flex;align-items:center;justify-content:center;color:var(--color-brand);cursor:pointer;border-radius:50%;}
+.map-v2-card-fav .material-symbols-outlined{font-size:22px;}
+.map-v2-card-title{margin-top:7px;font-family:'Noto Serif SC','Songti SC',serif;font-size:17px;line-height:25px;font-weight:700;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.map-v2-card-meta{margin-top:2px;padding-right:96px;color:#686E68;font-size:13px;line-height:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.map-v2-card-note{position:absolute;right:12px;bottom:10px;color:var(--color-brand);font-size:13px;line-height:19px;}
+.map-v2-card-note.empty{color:#8A8E88;}
+.map-v2-empty{height:180px;display:flex;align-items:center;justify-content:center;color:#72766F;font-size:14px;}
+.map-v2-marker{position:relative;min-width:72px;height:42px;padding:6px 10px;border-radius:13px 13px 13px 3px;background:var(--color-brand);color:#fff;border:2px solid #fff;box-shadow:0 4px 11px rgba(31,41,35,.22);font:600 13px/19px 'Noto Sans SC',sans-serif;text-align:center;white-space:nowrap;transform:translate(-50%,-100%);}
+.map-v2-marker small{display:block;font-size:11px;line-height:14px;font-weight:500;opacity:.9;}
+.map-v2-marker.night{background:var(--color-night);}.map-v2-marker.temple{background:#C78A28;}.map-v2-marker.morning{background:#2F7D4A;}
+.map-v2-user-dot{width:28px;height:28px;border-radius:50%;border:4px solid #fff;background:var(--color-pine);box-shadow:0 2px 8px rgba(31,41,35,.25);}
+.map-v2-searchbar button:focus-visible,.map-v2-locate:focus-visible,.map-v2-chip:focus-visible,.map-v2-card-fav:focus-visible,.map-v2-handle-button:focus-visible{outline:2px solid var(--color-brand);outline-offset:2px;}
+
 
 
 </style>
@@ -2711,6 +2784,31 @@ body.home-preview .app-status-preview{display:flex;}
 
 
       <div id="user-page-nearby" class="hidden">
+
+        <section class="map-v2-shell" id="map-v2-shell" aria-label="附近集市地图">
+          <div class="map-v2-canvas" id="map-v2-canvas" aria-label="高德地图"></div>
+          <div class="map-v2-searchbar">
+            <button class="map-v2-back" type="button" onclick="closeMapView()" aria-label="返回首页"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span></button>
+            <button class="map-v2-search-action" type="button" onclick="openSearchPage()"><span class="material-symbols-outlined" aria-hidden="true">search</span><span>搜索集市或地区</span></button>
+            <button class="map-v2-filter-place" type="button" onclick="openLocationModal()"><span>兰山区</span><span class="material-symbols-outlined" aria-hidden="true">expand_more</span></button>
+          </div>
+          <button class="map-v2-locate" type="button" onclick="locateMapV2()" aria-label="回到我的位置"><span class="material-symbols-outlined" aria-hidden="true">my_location</span></button>
+          <section class="map-v2-sheet" id="map-v2-sheet" aria-label="附近集市列表">
+            <button class="map-v2-handle-button" type="button" onclick="toggleMapV2Sheet()" aria-label="展开或收起附近集市列表"></button>
+            <div class="map-v2-sheet-head">
+              <h2 class="map-v2-sheet-title" id="map-v2-sheet-title">附近集市</h2>
+              <label class="map-v2-today-control"><span>只看今天</span><input id="map-v2-today" type="checkbox" onchange="filterMapV2Today(this.checked)"><span class="map-v2-switch" aria-hidden="true"></span></label>
+            </div>
+            <div class="map-v2-chips" role="group" aria-label="地图集市分类">
+              <button class="map-v2-chip active" type="button" data-category="全部" onclick="selectMapV2Category(this,'全部')">全部</button>
+              <button class="map-v2-chip" type="button" data-category="大集" onclick="selectMapV2Category(this,'大集')">大集</button>
+              <button class="map-v2-chip" type="button" data-category="庙会" onclick="selectMapV2Category(this,'庙会')">庙会</button>
+              <button class="map-v2-chip" type="button" data-category="早市" onclick="selectMapV2Category(this,'早市')">早市</button>
+              <button class="map-v2-chip" type="button" data-category="夜市" onclick="selectMapV2Category(this,'夜市')">夜市</button>
+            </div>
+            <div class="map-v2-list" id="map-v2-list" aria-live="polite"></div>
+          </section>
+        </section>
 
         <div class="nearby-header">
 
@@ -7258,6 +7356,10 @@ function _updateCategoryList(cats) {
     setTimeout(applyHomePreviewState, 0);
     return;
   }
+  if (['map-default','map-raised'].includes(homePreviewMode)) {
+    setTimeout(applyMapV2PreviewState, 0);
+    return;
+  }
 
   // 定位与数据分页并行，避免等 3030 条数据全部加载后才弹出位置授权。
   setTimeout(() => { if (!hasLocation && !isLocating) silentLocate(); }, 250);
@@ -7392,6 +7494,8 @@ function switchAdmin(p,el){
 
 function switchUserPage(p){
 
+  if (p !== 'nearby') document.body.classList.remove('map-v2-active');
+
   if (!currentUser && ['publish', 'fav', 'my'].includes(p)) {
 
     requireLoginScreen('请先登录后使用该功能');
@@ -7423,12 +7527,222 @@ function switchUserPage(p){
 // 首页"集市地图"按钮：跳附近页并自动进入地图模式
 function openMapView(){
   switchUserPage('nearby');
-  // 先定位，再切地图视图（稍等初始化）
-  doLocate();
-  if(nearbyViewMode !== 'map'){
-    setTimeout(()=>{ if(nearbyViewMode!=='map') toggleNearbyView(); }, 400);
-  }
+  document.body.classList.add('map-v2-active');
+  initMapV2();
 }
+
+const MAP_V2_PREVIEW_MARKETS = [
+  {id:'map-morning',name:'枣沟头早市',category:'早市',distanceMeters:650,statusLabel:'营业中',statusClass:'daily',scheduleText:'每日营业 · 至 09:30',rating:4.6,reviewCount:48,lat:35.127,lng:118.328},
+  {id:'map-market',name:'李官大集',category:'大集',distanceMeters:2800,statusLabel:'今天有集',statusClass:'today',scheduleText:'阴历逢一、逢六',rating:4.8,reviewCount:126,lat:35.142,lng:118.356},
+  {id:'map-night',name:'半程夜市',category:'夜市',distanceMeters:6300,statusLabel:'今晚开市',statusClass:'night',scheduleText:'每日营业 · 17:00–23:00',rating:4.7,reviewCount:86,lat:35.108,lng:118.373},
+  {id:'map-temple',name:'沂州庙会',category:'庙会',distanceMeters:9100,statusLabel:'明天开集',statusClass:'tomorrow',scheduleText:'指定日期 · 7月14日',rating:null,reviewCount:0,lat:35.092,lng:118.307}
+];
+let mapV2Instance = null;
+let mapV2Markers = [];
+let mapV2Category = '全部';
+let mapV2TodayOnly = false;
+let mapV2Source = [];
+
+function closeMapView(){
+  document.body.classList.remove('map-v2-active','map-preview');
+  switchUserPage('home');
+}
+
+function mapV2CategoryOf(m){
+  const value = String(m.category || m.cat || '');
+  if (value.includes('庙会')) return '庙会';
+  if (value.includes('早市')) return '早市';
+  if (value.includes('夜市')) return '夜市';
+  return '大集';
+}
+
+function mapV2NormalizeMarket(m){
+  const distanceMeters = Number.isFinite(Number(m.distanceMeters))
+    ? Number(m.distanceMeters)
+    : Number.isFinite(Number(m.dist)) ? Math.round(Number(m.dist) * 1000) : null;
+  const statusLabel = m.statusLabel || (m.is_open_now ? '营业中' : m.next_open_label) || (mapV2CategoryOf(m)==='夜市' ? '今晚开市' : '即将开集');
+  let statusClass = m.statusClass || 'category';
+  if (!m.statusClass) {
+    if (/今天|营业中/.test(statusLabel)) statusClass = 'today';
+    else if (/今晚/.test(statusLabel)) statusClass = 'night';
+    else if (/明天/.test(statusLabel)) statusClass = 'tomorrow';
+    else if (/每日/.test(statusLabel)) statusClass = 'daily';
+  }
+  return {
+    ...m,
+    category:mapV2CategoryOf(m),
+    distanceMeters,
+    statusLabel,
+    statusClass,
+    scheduleText:m.scheduleText || m.homeScheduleText || formatScheduleTag(m.openTime || m.open_time) || m.time || '集期待确认',
+    reviewCount:Number(m.reviewCount ?? m.review_count ?? 0),
+    rating:m.rating == null ? null : Number(m.rating),
+    lat:Number(m.lat),lng:Number(m.lng)
+  };
+}
+
+function mapV2Filtered(){
+  return mapV2Source.filter(m => {
+    if (mapV2Category !== '全部' && m.category !== mapV2Category) return false;
+    if (mapV2TodayOnly && !['today','daily','night'].includes(m.statusClass)) return false;
+    return true;
+  });
+}
+
+function mapV2Esc(value){
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+function renderMapV2List(){
+  const list = document.getElementById('map-v2-list');
+  const title = document.getElementById('map-v2-sheet-title');
+  if (!list) return;
+  const markets = mapV2Filtered();
+  const raised = document.getElementById('map-v2-shell')?.classList.contains('is-raised');
+  const preview = new URLSearchParams(location.search).get('preview');
+  if (title) title.textContent = raised ? `${preview ? 18 : markets.length} 个附近集市` : '附近集市';
+  if (!markets.length) {
+    list.innerHTML = '<div class="map-v2-empty">当前筛选下暂无集市</div>';
+    return;
+  }
+  list.innerHTML = markets.map(m => {
+    const distance = m.distanceMeters == null ? '距离待定位' : formatDistanceMeters(m.distanceMeters);
+    const noReview = m.rating == null || !m.reviewCount;
+    const review = noReview ? '暂无评价' : `${m.rating.toFixed(1)}分 · ${m.reviewCount}条`;
+    const detailId = JSON.stringify(m.id);
+    return `<article class="map-v2-card" onclick="openMapV2Market(${detailId})">
+      <div class="map-v2-card-top">
+        <span class="map-v2-card-status ${mapV2Esc(m.statusClass)}">${mapV2Esc(m.statusLabel)}</span>
+        <span class="map-v2-card-distance">${mapV2Esc(distance)}</span>
+      </div>
+      <button class="map-v2-card-fav" type="button" onclick="event.stopPropagation();toggleMapV2Favorite(this)" aria-label="收藏${mapV2Esc(m.name)}"><span class="material-symbols-outlined" aria-hidden="true">favorite</span></button>
+      <h3 class="map-v2-card-title">${mapV2Esc(m.name)}</h3>
+      <p class="map-v2-card-meta">${mapV2Esc(m.scheduleText)}</p><span class="map-v2-card-note ${noReview ? 'empty' : ''}">${mapV2Esc(review)}</span>
+    </article>`;
+  }).join('');
+}
+
+function toggleMapV2Favorite(button){
+  const icon = button.querySelector('.material-symbols-outlined');
+  const active = button.classList.toggle('active');
+  if (icon) { icon.textContent = active ? 'favorite' : 'favorite'; icon.style.fontVariationSettings = active ? "'FILL' 1" : "'FILL' 0"; icon.style.color = active ? 'var(--color-brand)' : ''; }
+}
+
+function openMapV2Market(id){
+  const market = MARKETS.find(item => String(item.id) === String(id));
+  if (market) openMarketDetail(market);
+}
+
+function setMapV2Raised(raised){
+  document.getElementById('map-v2-shell')?.classList.toggle('is-raised', !!raised);
+  renderMapV2List();
+  setTimeout(()=>mapV2Instance?.resize?.(), 300);
+}
+
+function toggleMapV2Sheet(){
+  const shell = document.getElementById('map-v2-shell');
+  setMapV2Raised(!shell?.classList.contains('is-raised'));
+}
+
+function selectMapV2Category(button, category){
+  mapV2Category = category;
+  document.querySelectorAll('.map-v2-chip').forEach(chip => chip.classList.toggle('active', chip === button));
+  renderMapV2List();
+  renderMapV2Markers();
+}
+
+function filterMapV2Today(checked){
+  mapV2TodayOnly = !!checked;
+  renderMapV2List();
+  renderMapV2Markers();
+}
+
+function locateMapV2(){
+  if (mapV2Instance && Number.isFinite(Number(userLat)) && Number.isFinite(Number(userLng))) {
+    mapV2Instance.setZoomAndCenter(14,[Number(userLng),Number(userLat)]);
+    return;
+  }
+  if (mapV2Instance) mapV2Instance.setZoomAndCenter(13,[118.34,35.12]);
+}
+
+function mapV2MarkerClass(m){
+  if (m.category === '夜市') return 'night';
+  if (m.category === '庙会') return 'temple';
+  if (m.category === '早市') return 'morning';
+  return '';
+}
+
+function renderMapV2Markers(){
+  if (!mapV2Instance || !window.AMap) return;
+  mapV2Instance.remove(mapV2Markers);
+  mapV2Markers = [];
+  mapV2Filtered().filter(m => Number.isFinite(m.lat) && Number.isFinite(m.lng)).forEach(m => {
+    const content = `<div class="map-v2-marker ${mapV2MarkerClass(m)}">${mapV2Esc(m.name)}<small>${mapV2Esc(m.statusLabel)}</small></div>`;
+    const marker = new AMap.Marker({position:[m.lng,m.lat],content,offset:new AMap.Pixel(0,0),zIndex:20});
+    marker.on('click',()=>openMapV2Market(m.id));
+    mapV2Instance.add(marker);
+    mapV2Markers.push(marker);
+  });
+  const lat = Number.isFinite(Number(userLat)) ? Number(userLat) : 35.12;
+  const lng = Number.isFinite(Number(userLng)) ? Number(userLng) : 118.34;
+  const userMarker = new AMap.Marker({position:[lng,lat],content:'<div class="map-v2-user-dot" aria-label="我的位置"></div>',offset:new AMap.Pixel(-14,-14),zIndex:30});
+  mapV2Instance.add(userMarker);
+  mapV2Markers.push(userMarker);
+}
+
+function initMapV2(){
+  const preview = new URLSearchParams(location.search).get('preview');
+  const isPreview = ['map-default','map-raised'].includes(preview);
+  mapV2Source = (isPreview ? MAP_V2_PREVIEW_MARKETS : (_nearbyBaseList.length ? _nearbyBaseList : (_HOME_NEARBY_SOURCE.length ? _HOME_NEARBY_SOURCE : MARKETS)))
+    .map(mapV2NormalizeMarket).filter(m => Number.isFinite(m.lat) && Number.isFinite(m.lng)).slice(0,40);
+  if (!mapV2Source.length && isPreview) mapV2Source = MAP_V2_PREVIEW_MARKETS.map(mapV2NormalizeMarket);
+  renderMapV2List();
+  if (!window.AMap) {
+    setTimeout(initMapV2,300);
+    return;
+  }
+  if (mapV2Instance) mapV2Instance.destroy();
+  mapV2Instance = new AMap.Map('map-v2-canvas',{zoom:13,center:[118.34,35.12],mapStyle:'amap://styles/whitesmoke',viewMode:'2D',showLabel:true});
+  renderMapV2Markers();
+}
+
+function applyMapV2PreviewState(){
+  const mode = new URLSearchParams(location.search).get('preview');
+  if (!['map-default','map-raised'].includes(mode)) return false;
+  document.body.classList.add('home-preview','map-preview');
+  showScreen('user-screen');
+  document.querySelectorAll('[id^="user-page-"]').forEach(page => page.classList.add('hidden'));
+  document.getElementById('user-page-nearby')?.classList.remove('hidden');
+  document.body.classList.add('map-v2-active');
+  const time = document.getElementById('home-preview-time');
+  if (time) time.textContent = '09:10';
+  setMapV2Raised(mode === 'map-raised');
+  initMapV2();
+  return true;
+}
+
+(function initMapV2Drag(){
+  let startY = 0;
+  let startRaised = false;
+  const start = event => {
+    const handle = event.target.closest?.('.map-v2-handle-button');
+    if (!handle) return;
+    startY = event.clientY ?? event.touches?.[0]?.clientY ?? 0;
+    startRaised = document.getElementById('map-v2-shell')?.classList.contains('is-raised');
+    handle.setPointerCapture?.(event.pointerId);
+  };
+  const end = event => {
+    if (!startY) return;
+    const y = event.clientY ?? event.changedTouches?.[0]?.clientY ?? startY;
+    const delta = y - startY;
+    if (Math.abs(delta) > 40) setMapV2Raised(delta < 0);
+    else setMapV2Raised(startRaised);
+    startY = 0;
+  };
+  document.addEventListener('pointerdown',start);
+  document.addEventListener('pointerup',end);
+  document.addEventListener('pointercancel',end);
+})();
 
 // CATEGORIES
 
