@@ -1,0 +1,17 @@
+{
+  "applied": false,
+  "source_markets": 3030,
+  "target_markets_before": 3030,
+  "insert": 0,
+  "update": 1,
+  "unchanged_source_rows": 3029,
+  "protected_columns": [
+    "rating",
+    "review_count",
+    "fav_count",
+    "created_by",
+    "created_at"
+  ],
+  "backup": null,
+  "diff_csv": "output/deployment-rehearsal/market_sync_diff_20260714_020340_311567.csv"
+}
