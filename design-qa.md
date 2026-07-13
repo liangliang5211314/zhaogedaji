@@ -103,6 +103,40 @@ passed
 
 ---
 
+## 后台三种核心页面样板（B1 / B2 / B3）
+
+- 设计源：Figma `8qnzoTS24jw7gfJp5QxYP1`，节点 `15:3`、`15:4`、`15:5`
+- 设计画板：1440 × 1024
+- 预览入口：`?preview=admin-markets`、`admin-review`、`admin-drawer`
+
+| 样板 | 设计截图 | 实现截图 | 并排对比 |
+| --- | --- | --- | --- |
+| B1 集市管理表格 | `output/admin-b1/reference-markets.png` | `output/admin-b1/implementation-markets-1440.png` | `output/admin-b1/comparison-markets.png` |
+| B2 评价审核队列 | `output/admin-b2/reference-review.png` | `output/admin-b2/implementation-review-1440.png` | `output/admin-b2/comparison-review.png` |
+| B3 open_time v2 抽屉 | `output/admin-b3/reference-open-time-drawer.png` | `output/admin-b3/implementation-open-time-drawer-1440.png` | `output/admin-b3/comparison-open-time-drawer.png` |
+
+### Findings
+
+- 无遗留 P0 / P1 / P2 问题。
+- P3：实现使用正式品牌图标与 Material Symbols，Figma 草稿使用简化标志；导航槽位、选中态、文字层级与对比度一致。
+- P3：实现为保证五种主规则可直接编辑，阴历/阳历日序展示 1–30 全量选择器；默认已选值仍严格为展开入库的 `[1,6,11,16,21,26]`。
+
+### 契约与交互检查
+
+- 全局框架为固定 240px 深色侧栏、浅灰工作区、72px 顶栏；侧栏待办徽标表达待处理总数，三位数不折行，超过 999 显示 `999+`。
+- B1 使用固定筛选条、批量操作、表格、分页；坐标统一显示村庄级 / POI / 乡镇级 / 待复核；更新人支持 `AI 修复 → 王宁` 留痕。
+- B2 左列表右详情，评价总数与可见样本分离；预览显示 12 项待审、坐标 521、集期 71；图片/视频审核、AI 初审意见、通过/驳回原因、A/R/J/K 快捷键均可操作。
+- B3 为 480px 右侧抽屉；五种主规则互斥，指定日期支持多条，阴历 days 完整展开入库，ISO 周日为 7，例外优先级为 `closed > override > 主规则`。
+- `specific_dates` 加载时不会残留自动创建的空白行；保存前经过 JSON Schema 2020-12 校验；派生字段不入库，`needs_review` 不参与计算。
+- 登录与会话恢复均进入新版框架；角色显示为超级管理员 / 审核员，审核员不可进入 APP 设置与数据采集等系统页。
+- 三个预览入口控制台无阻断错误；内联脚本全部通过 `new Function` 语法检查；全量 pytest `51 passed`。
+
+### final result
+
+passed
+
+---
+
 ## C 端阶段一完成性复核
 
 - 复核日期：2026-07-14
