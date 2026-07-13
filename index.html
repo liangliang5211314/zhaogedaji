@@ -622,6 +622,34 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:var(--paper-warm);}
 .mgrid-open-badge{display:inline-block;background:#E8F5E9;color:#2D7A4F;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:600;margin-left:4px;}
 .mgrid-meta{font-size:10px;color:#8A7A68;display:flex;justify-content:space-between;align-items:center;}
 
+/* ── 首页定位与附近推荐 ──────────────────────────── */
+.home-location-status{margin:10px 14px 0;padding:10px 12px;background:#fff;border:1px solid #ece8e1;border-radius:8px;display:flex;align-items:center;gap:9px;min-height:44px;}
+.home-location-dot{width:8px;height:8px;border-radius:50%;background:#e8703a;box-shadow:0 0 0 4px rgba(232,112,58,.12);flex-shrink:0;}
+.home-location-copy{min-width:0;flex:1;}
+.home-location-title{font-size:12px;font-weight:700;color:#292524;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.home-location-sub{font-size:10px;color:#78716c;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.home-location-action{border:0;background:transparent;color:#c05520;font-size:11px;font-weight:700;padding:6px;cursor:pointer;white-space:nowrap;}
+.home-nearby-block{padding:0 14px;}
+.home-nearby-list{display:flex;flex-direction:column;gap:8px;}
+.home-nearby-item{background:#fff;border:1px solid #ece8e1;border-radius:8px;padding:11px;display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:10px;align-items:center;cursor:pointer;}
+.home-nearby-icon{width:42px;height:42px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;}
+.home-nearby-main{min-width:0;}
+.home-nearby-name{font-size:14px;font-weight:700;color:#1c1b1b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.home-nearby-meta{font-size:10px;color:#78716c;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.home-nearby-badges{display:flex;gap:5px;align-items:center;margin-top:5px;flex-wrap:wrap;}
+.home-open-tag{font-size:10px;font-weight:700;color:#15803d;background:#ecfdf3;border-radius:6px;padding:2px 6px;}
+.home-next-tag{font-size:10px;font-weight:700;color:#c2410c;background:#fff7ed;border-radius:6px;padding:2px 6px;}
+.home-nearby-distance{font-size:13px;font-weight:800;color:#2b5ba8;white-space:nowrap;text-align:right;}
+.home-map-entry{margin:10px 14px 0;width:calc(100% - 28px);height:42px;border:1px solid rgba(43,91,168,.24);background:#f7faff;color:#214f91;border-radius:8px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;}
+.home-nearby-empty{padding:22px 12px;text-align:center;background:#fff;border:1px dashed #ddd6ce;border-radius:8px;color:#78716c;font-size:12px;}
+.home-load-more{display:none;margin:12px 14px 0;width:calc(100% - 28px);height:38px;border:1px solid #ddd6ce;background:#fff;color:#57534e;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;}
+
+@media (max-width:375px){
+  .home-nearby-item{grid-template-columns:38px minmax(0,1fr) auto;padding:10px 9px;gap:8px;}
+  .home-nearby-icon{width:38px;height:38px;font-size:20px;}
+  .home-nearby-distance{font-size:12px;}
+}
+
 
 
 
@@ -1948,6 +1976,16 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:var(--paper-warm);}
       <!-- HOME -->
       <div id="user-page-home">
 
+        <!-- 定位状态 -->
+        <div class="home-location-status" id="home-location-status">
+          <span class="home-location-dot" id="home-location-dot"></span>
+          <div class="home-location-copy">
+            <div class="home-location-title" id="home-location-title">正在定位附近集市</div>
+            <div class="home-location-sub" id="home-location-sub">允许定位后将优先显示离您最近的大集</div>
+          </div>
+          <button class="home-location-action" id="home-location-action" onclick="retryHomeLocate()">重新定位</button>
+        </div>
+
         <!-- 今日有集横幅 -->
         <div class="today-open-banner" onclick="_filterTodayOpen()">
           <div class="today-banner-left">
@@ -1960,6 +1998,18 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:var(--paper-warm);}
           </div>
           <div class="today-banner-arrow">›</div>
         </div>
+
+        <!-- 离我最近 -->
+        <div class="section-header" style="margin-top:14px;">
+          <div class="section-title">离我最近</div>
+          <div class="see-all" onclick="switchUserPage('nearby');doLocate();">查看全部 →</div>
+        </div>
+        <div class="home-nearby-block">
+          <div class="home-nearby-list" id="home-nearby-list">
+            <div class="home-nearby-empty">正在获取附近集市...</div>
+          </div>
+        </div>
+        <button class="home-map-entry" onclick="openMapView()"><span>🗺️</span><span>在地图上查看附近集市</span><span>›</span></button>
 
         <!-- 金刚区 -->
         <div class="diamond-section">
@@ -2013,6 +2063,7 @@ tr:last-child td{border-bottom:none;}tr:hover td{background:var(--paper-warm);}
 
         <!-- 双列卡片 -->
         <div class="market-grid" id="market-list"></div>
+        <button class="home-load-more" id="home-load-more" onclick="loadMoreHomeMarkets()">继续加载</button>
 
         <!-- 庙会专区 -->
         <div id="fair-section-block" style="display:none;">
@@ -3789,6 +3840,8 @@ let showMarketSection = false;  // 后台控制是否显示市场区块
 
 
 let selectedRegion = '全部地区';
+
+let homeRenderLimit = 40;
 
 let selectedCat = '全部';
 
@@ -6661,6 +6714,9 @@ function _updateCategoryList(cats) {
 
 (async function loadApiData() {
 
+  // 定位与数据分页并行，避免等 3030 条数据全部加载后才弹出位置授权。
+  setTimeout(() => { if (!hasLocation && !isLocating) silentLocate(); }, 250);
+
   // 加载 app 配置（市场区块开关 + 分类 is_market_type 信息）
 
   try {
@@ -6704,6 +6760,7 @@ function _updateCategoryList(cats) {
         if (!renderedFirstPage || meta.page % 4 === 0 || all.length >= meta.total) {
           renderedFirstPage = true;
           if (typeof renderMarkets === 'function') renderMarkets();
+          if (!hasLocation) renderHomeNearbyForRegion();
         }
       }
     });
@@ -6834,7 +6891,7 @@ function selectCat(el,name){
 
   document.querySelectorAll('.cat-item').forEach(c=>c.classList.remove('active'));
 
-  el.classList.add('active');selectedCat=name;
+  el.classList.add('active');selectedCat=name;homeRenderLimit=40;
 
   const t=document.getElementById('section-title');if(t)t.textContent=name==='全部'?'今日推荐':name;
 
@@ -6851,6 +6908,8 @@ function filterChip(el,name){
   document.querySelectorAll('.filter-chip:not(.region-chip)').forEach(c=>c.classList.remove('active'));
 
   if (el) el.classList.add('active');
+
+  homeRenderLimit=40;
 
   const isDateFilter = ['今日开集','明日开集','周末大集'].includes(name);
   let list = isDateFilter
@@ -6893,6 +6952,104 @@ function getFiltered(){
 }
 
 function renderMarkets(){renderMarketList(getFiltered());updateTodayBanner();}
+
+let _HOME_NEARBY = [];
+
+function formatDistanceMeters(meters) {
+  const value = Number(meters);
+  if (!Number.isFinite(value)) return '';
+  if (value < 1000) return `${Math.max(0, Math.round(value))}米`;
+  const km = value / 1000;
+  return `${km < 10 ? km.toFixed(1) : Math.round(km)}km`;
+}
+
+function _setHomeLocationStatus(title, sub, located) {
+  const titleEl = document.getElementById('home-location-title');
+  const subEl = document.getElementById('home-location-sub');
+  const dotEl = document.getElementById('home-location-dot');
+  const actionEl = document.getElementById('home-location-action');
+  if (titleEl) titleEl.textContent = title;
+  if (subEl) subEl.textContent = sub;
+  if (dotEl) dotEl.style.background = located ? '#2D7A4F' : '#E8703A';
+  if (actionEl) actionEl.textContent = located ? '刷新位置' : '选择区县';
+}
+
+function retryHomeLocate() {
+  const action = document.getElementById('home-location-action');
+  if (!hasLocation && action?.textContent.includes('选择')) {
+    openLocationModal();
+    return;
+  }
+  hasLocation = false;
+  silentLocate();
+  _setHomeLocationStatus('正在刷新位置', '请稍候...', false);
+}
+
+function openHomeNearby(index) {
+  const market = _HOME_NEARBY[index];
+  if (market) openMarketDetail(market);
+}
+
+function renderHomeNearby(markets) {
+  const listEl = document.getElementById('home-nearby-list');
+  if (!listEl) return;
+  _HOME_NEARBY = (markets || []).slice(0, 5);
+  if (!_HOME_NEARBY.length) {
+    listEl.innerHTML = '<div class="home-nearby-empty">附近暂时没有可推荐的集市，可选择区县继续查看</div>';
+    return;
+  }
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  listEl.innerHTML = _HOME_NEARBY.map((m, index) => {
+    const todayOpen = isOpenOnDate(m.openTime, new Date());
+    const tomorrowOpen = !todayOpen && isOpenOnDate(m.openTime, tomorrow);
+    const badge = todayOpen
+      ? '<span class="home-open-tag">今日开集</span>'
+      : tomorrowOpen
+      ? '<span class="home-next-tag">明日开集</span>'
+      : (formatScheduleTag(m.openTime) ? `<span class="home-next-tag">${formatScheduleTag(m.openTime)}</span>` : '');
+    const distance = m.distanceMeters != null
+      ? formatDistanceMeters(m.distanceMeters)
+      : (m.dist != null ? formatDistanceMeters(Number(m.dist) * 1000) : '');
+    return `<div class="home-nearby-item" onclick="openHomeNearby(${index})">
+      <div class="home-nearby-icon" style="background:${m.bg};">${m.icon}</div>
+      <div class="home-nearby-main">
+        <div class="home-nearby-name">${m.name}</div>
+        <div class="home-nearby-meta">📍 ${_fullAddr(m)}</div>
+        <div class="home-nearby-badges">${badge}</div>
+      </div>
+      <div class="home-nearby-distance">${distance || '查看'}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderHomeNearbyForRegion() {
+  if (selectedRegion === '全部地区') {
+    renderHomeNearby([]);
+    return;
+  }
+  const filtered = MARKETS.filter(m =>
+    (!MARKET_CATS_SET.has(m.cat) || showMarketSection)
+    && (m.region || '').includes(selectedRegion)
+  );
+  renderHomeNearby(filtered);
+}
+
+async function loadHomeNearby(lat, lng) {
+  try {
+    const params = new URLSearchParams({lat, lng, radius: 100, limit: 12});
+    const response = await fetch('/api/markets/nearby?' + params.toString());
+    const payload = await response.json();
+    if (!response.ok || payload.code !== 200) throw new Error(payload.msg || '附近接口失败');
+    const nearby = (payload.data?.list || [])
+      .map(item => ({..._mapApiMarket(item), distanceMeters: item.distance, dist: item.distance / 1000}))
+      .filter(m => !MARKET_CATS_SET.has(m.cat) || showMarketSection);
+    renderHomeNearby(nearby);
+  } catch (error) {
+    console.warn('附近推荐加载失败，使用本地距离排序', error);
+    renderHomeNearby([...MARKETS].filter(m => m.dist != null).sort((a,b) => a.dist - b.dist));
+  }
+}
 
 // ── 新功能：按分类名选中 ──────────────────────────
 function selectCatByName(name){
@@ -6955,6 +7112,19 @@ function updateOpenDateTitle(filter, count){
   }
 }
 
+function loadMoreHomeMarkets() {
+  homeRenderLimit += 40;
+  renderMarkets();
+}
+
+function _updateHomeLoadMore(total) {
+  const button = document.getElementById('home-load-more');
+  if (!button) return;
+  const remaining = Math.max(0, total - homeRenderLimit);
+  button.style.display = remaining ? 'block' : 'none';
+  button.textContent = remaining ? `继续加载（还有 ${remaining} 条）` : '已加载全部';
+}
+
 function renderMarketList(list){
 
   const el=document.getElementById('market-list');if(!el)return;
@@ -6995,7 +7165,9 @@ function renderMarketList(list){
 
     if(!fairList.length){el.innerHTML='<div style="text-align:center;padding:40px 16px;color:var(--gray);"><div style="font-size:40px;margin-bottom:10px;">🎪</div><div style="font-size:13px;">暂无庙会数据</div></div>';return;}
 
-    el.innerHTML=fairList.map(m=>_renderFairCard(m)).join('');
+    el.innerHTML=fairList.slice(0, homeRenderLimit).map(m=>_renderFairCard(m)).join('');
+
+    _updateHomeLoadMore(fairList.length);
 
     return;
 
@@ -7007,20 +7179,21 @@ function renderMarketList(list){
 
   if(fairBlock) fairBlock.style.display = fairList.length ? '' : 'none';
 
-  if(fairEl) fairEl.innerHTML = fairList.map(m=>_renderFairCard(m)).join('');
+  if(fairEl) fairEl.innerHTML = fairList.slice(0, 8).map(m=>_renderFairCard(m)).join('');
 
 
 
   list = regList;
 
-  if(!list.length){el.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:240px;color:var(--gray);"><div style="font-size:44px;margin-bottom:12px;">🔍</div><div style="font-size:13px;">该条件下暂无集市</div></div>';return;}
+  if(!list.length){el.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:240px;color:var(--gray);"><div style="font-size:44px;margin-bottom:12px;">🔍</div><div style="font-size:13px;">该条件下暂无集市</div></div>';_updateHomeLoadMore(0);return;}
 
-  el.innerHTML=list.map(m=>{
+  _updateHomeLoadMore(list.length);
+  el.innerHTML=list.slice(0, homeRenderLimit).map(m=>{
     const lbl=nextOpenLabel(m.openTime||m.time);
     const isToday=(lbl===null);
     const loc=(()=>{const p=(m.region||'').split(/[··\/]/);return p.filter(Boolean).slice(-1)[0]||m.addr||'';})();
     const schedText=(()=>{const ot=m.openTime||m.time;if(!ot)return '';if(typeof ot==='object'&&ot.text)return ot.text;if(typeof ot==='string'){try{const o=JSON.parse(ot);return o.text||ot;}catch(e){return ot;}}return '';})();
-    const dist=(hasLocation&&m.dist!==null&&m.dist!==undefined)?`${m.dist}km`:'';
+    const dist=(hasLocation&&m.dist!==null&&m.dist!==undefined)?formatDistanceMeters(Number(m.dist)*1000):'';
     return `<div class="mgrid-card" onclick="openMarketDetail(MARKETS.find(x=>x.id==='${m.id}'))">
       <div class="mgrid-thumb" style="background:${m.bg};">
         <div style="position:absolute;inset:0;background:radial-gradient(circle at 35% 35%,rgba(255,255,255,.18),transparent 65%);"></div>
@@ -7031,7 +7204,7 @@ function renderMarketList(list){
         ${schedText?`<div><span class="mgrid-schedule${isToday?' today':''}">${schedText}</span>${isToday?'<span class="mgrid-open-badge">今日✓</span>':''}</div>`:''}
         <div class="mgrid-meta">
           <span>${loc}</span>
-          ${dist?`<span style="color:#2D7A4F;">📡 ${dist}</span>`:''}
+          ${dist?`<span style="color:#2D7A4F;">📍 ${dist}</span>`:''}
           ${(!isToday&&lbl)?`<span style="color:#c2410c;font-size:10px;">⏰${lbl}</span>`:''}
         </div>
       </div>
@@ -7912,13 +8085,13 @@ function silentLocate() {
 
         pos => onLocated(pos.coords.latitude, pos.coords.longitude, true, '当前位置'),
 
-        ()  => { isLocating = false; },
+        ()  => onLocated(null, null, false, '定位未开启'),
 
         { timeout: 10000, enableHighAccuracy: false }
 
       );
 
-    } else { isLocating = false; }
+    } else { onLocated(null, null, false, '设备不支持定位'); }
 
   };
 
@@ -7944,7 +8117,16 @@ function silentLocate() {
 
     });
 
-  } else { tryBrowser(); }
+  } else {
+    waitForAmap((fallback) => {
+      if (fallback || !window.AMap) {
+        tryBrowser();
+        return;
+      }
+      isLocating = false;
+      silentLocate();
+    });
+  }
 
 }
 
@@ -8240,6 +8422,22 @@ function onLocated(lat, lng, real, addrLabel) {
     return last.length > 10 ? last.slice(-10) : last;
   }
   if (nameEl) nameEl.textContent = located ? _shortAddr(addrLabel) : '全部地区';
+
+  if (located) {
+    _setHomeLocationStatus(
+      addrLabel || '已获取当前位置',
+      '已按实际距离推荐附近集市',
+      true
+    );
+    loadHomeNearby(userLat, userLng);
+  } else {
+    _setHomeLocationStatus(
+      selectedRegion === '全部地区' ? '未获取到当前位置' : `已选择 ${selectedRegion}`,
+      '可选择区县查看当地集市',
+      false
+    );
+    renderHomeNearbyForRegion();
+  }
 
   const descEl = document.getElementById('nearby-loc-desc');
 
@@ -9021,7 +9219,7 @@ function renderNearbyList(markets) {
 
     const distHtml = hasDist
 
-      ? `<span class="dist-num" style="color:${distColor};">📡 ${dist}km</span>
+      ? `<span class="dist-num" style="color:${distColor};">📍 ${formatDistanceMeters(dist * 1000)}</span>
 
          <div class="dist-bar"><div class="dist-fill" style="width:${fill}%;background:${distColor}"></div></div>
 
@@ -9960,6 +10158,9 @@ function applyAndClose() {
 
     // Homepage location filter
 
+    hasLocation = false;
+    userLat = null;
+    userLng = null;
     selectedRegion = addrSelected.short || '全部地区';
 
     const chip = document.getElementById('region-chip');
@@ -9981,6 +10182,13 @@ function applyAndClose() {
     if (t) t.textContent = addrSelected.level < 0 ? '今日推荐' : addrSelected.short + '·集市';
 
     renderMarkets();
+
+    _setHomeLocationStatus(
+      addrSelected.level < 0 ? '未选择地区' : `已选择 ${addrSelected.short}`,
+      addrSelected.level < 0 ? '可定位或手动选择区县' : '当前按所选地区显示集市',
+      false
+    );
+    renderHomeNearbyForRegion();
 
     if (addrSelected.level >= 0) showToast('📍 已选：' + regionStr);
 
