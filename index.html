@@ -7052,7 +7052,7 @@ function _detectLunarPattern(days) {
 
     // 逢x逢y（每月6次），两个基准日
 
-    return `逢${names[sorted[0]]||sorted[0]}逢${names[sorted[1]]||sorted[1]}`;
+    return `逢${names[sorted[0]]||sorted[0]}、逢${names[sorted[1]]||sorted[1]}`;
 
   }
 
@@ -7144,9 +7144,9 @@ function _mapApiMarket(m) {
 
   if (openTimeObj) {
 
-    timeStr = openTimeObj.source_text || openTimeObj.label || openTimeObj.custom || openTimeObj.text || '';
-
-    if (!timeStr && openTimeObj.type === 'daily') timeStr = '每日开集';
+    // v2 的结构化规则是唯一展示口径；source_text 只保留作迁移审计，
+    // 不能覆盖“阴历/阳历”等历法信息，也不能驱动 needs_review 记录。
+    timeStr = formatScheduleTag(openTimeObj);
 
   }
 
@@ -13193,29 +13193,39 @@ function formatScheduleTag(timeObj) {
 
   }
 
+  if (timeObj.migration_status === 'needs_review') return '集期待复核';
+
+  const rule = timeObj.version === 2 ? (timeObj.rule || {}) : timeObj;
+
   if (timeObj.type === 'daily') {
 
-    const label = timeObj.text || timeObj.label || '每天开放';
-
-    const range = timeObj.start && timeObj.end ? `${timeObj.start}-${timeObj.end}` : '';
-
-    return range && !label.includes(range) ? `${label} ${range}` : label;
+    return timeObj.version === 2 ? '每日营业' : (timeObj.text || timeObj.label || '每日营业');
 
   }
 
   if (timeObj.type === 'lunar') {
 
-    if (timeObj.label) return `农历${timeObj.label}`;
+    const numericDays = [...(rule.days || [])].map(Number).filter(Number.isFinite).sort((a,b)=>a-b);
 
-    const pattern = _detectLunarPattern(timeObj.days||[]);
+    const pattern = _detectLunarPattern(numericDays);
 
-    if (pattern) return `农历${pattern}`;
+    if (pattern) return `阴历${pattern}`;
 
-    const days = (timeObj.days||[]).map(d=>LUNAR_NAMES[d]||d);
+    const days = numericDays.map(d=>LUNAR_NAMES[d]||d);
 
-    if (days.length <= 3) return `农历${days.join('/')}`;
+    if (days.length <= 3) return `阴历${days.join('、')}`;
 
-    return `农历${days.slice(0,2).join('/')}等${days.length}天`;
+    return `阴历${days.slice(0,3).join('、')}等${days.length}天`;
+
+  }
+
+  if (timeObj.type === 'weekly') {
+
+    const sorted = [...(rule.weekdays || [])].map(Number).filter(d=>d>=1&&d<=7).sort((a,b)=>a-b);
+
+    if (sorted.length === 7) return '每日营业';
+
+    return sorted.length ? `每周${sorted.map(d=>'一二三四五六日'[d-1]).join('、周')}` : '';
 
   }
 
@@ -13233,11 +13243,23 @@ function formatScheduleTag(timeObj) {
 
   if (timeObj.type === 'monthly' || timeObj.type === 'solar') {
 
-    const sorted = [...(timeObj.days||[])].sort((a,b)=>a-b);
+    const sorted = [...(rule.days||[])].map(Number).filter(Number.isFinite).sort((a,b)=>a-b);
 
-    if (sorted.length <= 3) return `阳历${sorted.join('/')}日`;
+    if (sorted.length <= 3) return sorted.length ? `阳历每月${sorted.join('、')}日` : '';
 
-    return `阳历月${sorted.length}次`;
+    return `阳历每月${sorted.slice(0,3).join('、')}…日`;
+
+  }
+
+  if (timeObj.type === 'specific_dates') {
+
+    const entries = [...(rule.entries || [])].sort((a,b)=>(a.year||0)-(b.year||0)||a.month-b.month||a.day-b.day);
+
+    if (!entries.length) return '';
+
+    const labels = entries.slice(0,2).map(entry=>`${entry.calendar === 'lunar' ? '阴历' : ''}${entry.month}月${entry.day}日`);
+
+    return `指定日期 · ${labels.join('、')}${entries.length > 2 ? '…' : ''}`;
 
   }
 
