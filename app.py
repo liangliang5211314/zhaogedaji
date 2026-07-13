@@ -258,6 +258,22 @@ def init_db():
             UNIQUE(user_id, market_id)
         );
 
+        CREATE TABLE IF NOT EXISTS data_review_queue (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            entity_type    TEXT NOT NULL,
+            entity_id      TEXT NOT NULL,
+            issue_type     TEXT NOT NULL,
+            reason         TEXT NOT NULL DEFAULT '',
+            source_payload TEXT NOT NULL DEFAULT '{}',
+            status         TEXT NOT NULL DEFAULT 'pending',
+            created_at     TEXT DEFAULT (datetime('now','localtime')),
+            updated_at     TEXT DEFAULT (datetime('now','localtime')),
+            UNIQUE(entity_type, entity_id, issue_type)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_data_review_queue_status
+        ON data_review_queue(status, issue_type);
+
         CREATE INDEX IF NOT EXISTS idx_reminder_user   ON market_reminders(user_id);
         CREATE INDEX IF NOT EXISTS idx_reminder_market ON market_reminders(market_id, status);
 
@@ -2101,6 +2117,70 @@ def settings_market_section():
     conn.execute("INSERT OR REPLACE INTO app_settings(key,value) VALUES('show_market_section',?)", (enabled,))
     conn.commit(); conn.close()
     return jsonify({'code': 200, 'msg': '保存成功'})
+
+
+@app.route('/api/admin/data-review-queue', methods=['GET'])
+@admin_required
+def admin_data_review_queue():
+    """统一人工复核队列：集期迁移、OCR 名称与地理编码失败。"""
+    status = (request.args.get('status') or 'pending').strip()
+    issue_type = (request.args.get('issue_type') or '').strip()
+    page = max(1, request.args.get('page', type=int) or 1)
+    per_page = min(200, max(1, request.args.get('per_page', type=int) or 50))
+    where = []
+    params = []
+    if status != 'all':
+        where.append('q.status=?')
+        params.append(status)
+    if issue_type:
+        where.append('q.issue_type=?')
+        params.append(issue_type)
+    clause = (' WHERE ' + ' AND '.join(where)) if where else ''
+    conn = get_db()
+    total = conn.execute(
+        'SELECT COUNT(*) FROM data_review_queue q' + clause, params
+    ).fetchone()[0]
+    rows = conn.execute(
+        '''SELECT q.*,m.name AS market_name,m.region,m.status AS market_status
+           FROM data_review_queue q
+           LEFT JOIN markets m ON q.entity_type='market' AND m.id=q.entity_id'''
+        + clause + ' ORDER BY q.created_at ASC,q.id ASC LIMIT ? OFFSET ?',
+        params + [per_page, (page - 1) * per_page],
+    ).fetchall()
+    counts = dict(conn.execute(
+        "SELECT issue_type,COUNT(*) FROM data_review_queue WHERE status='pending' GROUP BY issue_type"
+    ).fetchall())
+    conn.close()
+    data = []
+    for row in rows:
+        item = dict(row)
+        try:
+            item['source_payload'] = json.loads(item.get('source_payload') or '{}')
+        except (TypeError, ValueError):
+            pass
+        data.append(item)
+    return ok({'list': data, 'total': total, 'page': page, 'per_page': per_page, 'pending_counts': counts})
+
+
+@app.route('/api/admin/data-review-queue/<int:queue_id>', methods=['PATCH'])
+@admin_required
+def admin_update_data_review(queue_id):
+    data = request.get_json(silent=True) or {}
+    status = str(data.get('status') or '').strip()
+    if status not in {'pending', 'resolved', 'ignored'}:
+        return err('status 必须是 pending/resolved/ignored')
+    conn = get_db()
+    exists = conn.execute('SELECT id FROM data_review_queue WHERE id=?', (queue_id,)).fetchone()
+    if not exists:
+        conn.close()
+        return err('复核记录不存在', 404)
+    conn.execute(
+        "UPDATE data_review_queue SET status=?,updated_at=datetime('now','localtime') WHERE id=?",
+        (status, queue_id),
+    )
+    conn.commit()
+    conn.close()
+    return ok(None, '复核状态已更新')
 
 @app.route('/api/admin/gemini-key', methods=['GET', 'POST'])
 @admin_required

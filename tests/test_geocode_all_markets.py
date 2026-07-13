@@ -103,3 +103,55 @@ def test_geocode_row_uses_admin_adcode_and_stops_on_first_valid_query(monkeypatc
     assert query == "河北省保定市唐县王京村"
     assert calls == [query]
     assert result["adcode"] == "130627"
+
+
+def test_ocr_name_cleanup_is_conservative():
+    assert geo.analyze_market_name("7城关庙会") == ("城关庙会", "")
+    assert geo.analyze_market_name("•八林庄庙会") == ("八林庄庙会", "")
+    cleaned, reason = geo.analyze_market_name("》奔城集是农历三大集")
+    assert cleaned == "奔城集是农历三大集"
+    assert reason.startswith("OCR脏数据:")
+    _, reason = geo.analyze_market_name("一仙戈1土大集")
+    assert reason.startswith("OCR脏数据:")
+
+
+def test_place_search_accepts_exact_county_and_market_token():
+    payload = {
+        "status": "1",
+        "pois": [{
+            "name": "王京村村民委员会",
+            "type": "政府机构及社会团体;政府机关;乡镇以下级政府及事业单位",
+            "address": "王京镇王京村",
+            "pname": "河北省",
+            "cityname": "保定市",
+            "adname": "唐县",
+            "adcode": "130627",
+            "location": "115.0399,38.6260",
+        }],
+    }
+    result, reason = geo.validate_place_result(market(), payload, "130627")
+    assert reason == ""
+    assert result["source"] == "place_text"
+    assert result["level"] == "村庄"
+
+
+def test_direct_county_city_ignores_legacy_parent_city_only_when_adcode_matches():
+    row = market(
+        name="北街庙会",
+        region="河北省·石家庄市·辛集市",
+        address="河北省辛集市北街村",
+    )
+    payload = amap_payload(adcode="130181")
+    payload["geocodes"][0].update({
+        "formatted_address": "河北省辛集市北街村",
+        "city": "辛集市",
+        "district": "辛集市",
+    })
+    result, reason = geo.validate_market_result(row, payload, "130181")
+    assert reason == ""
+    assert result["adcode"] == "130181"
+
+    payload["geocodes"][0]["adcode"] = "130682"
+    result, reason = geo.validate_market_result(row, payload, "130181")
+    assert result is None
+    assert reason == "adcode不一致:130682"
