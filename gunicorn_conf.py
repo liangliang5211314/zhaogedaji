@@ -1,5 +1,8 @@
 """Gunicorn 生产配置"""
 import multiprocessing
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ── 绑定 ─────────────────────────────────────────────────────
 bind    = '127.0.0.1:5000'
@@ -15,13 +18,13 @@ graceful_timeout = 60
 keepalive     = 5
 
 # ── 进程 ─────────────────────────────────────────────────────
-chdir = '/www/wwwroot/zhaogedaji'
+chdir = BASE_DIR
 # pidfile 只在手动 --daemon 启动时需要；systemd 管理时不设置
 
 # ── 日志 ─────────────────────────────────────────────────────
 loglevel    = 'info'
-errorlog    = '/www/wwwroot/zhaogedaji/logs/gunicorn_error.log'
-accesslog   = '/www/wwwroot/zhaogedaji/logs/access.log'
+errorlog    = os.path.join(BASE_DIR, 'logs', 'gunicorn_error.log')
+accesslog   = os.path.join(BASE_DIR, 'logs', 'access.log')
 access_log_format = '%(t)s %(h)s "%(r)s" %(s)s %(L)ss %(b)sB'
 
 # ── 进程名 ───────────────────────────────────────────────────
