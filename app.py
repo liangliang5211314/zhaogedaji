@@ -981,6 +981,62 @@ def get_open_regions():
     return jsonify({'code': 200, 'data': sorted(regions)})
 
 
+@app.route('/api/regions/popular', methods=['GET'])
+def get_popular_regions():
+    """按区县聚合集市数量与特色标签，供旅行热门地区使用。"""
+    try:
+        limit = max(1, min(int(request.args.get('limit', 4)), 20))
+    except (TypeError, ValueError):
+        return err('limit 必须是整数', 400)
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT region, category, tags
+        FROM markets
+        WHERE status='published' AND region IS NOT NULL AND region!=''
+    """).fetchall()
+    conn.close()
+
+    groups = {}
+    generic_tags = {'农村大集', '集市', '其他市场'}
+    for row in rows:
+        parts = [part.strip() for part in row['region'].split('·') if part.strip()]
+        if not parts:
+            continue
+        group_parts = parts[:3] if len(parts) >= 3 else parts
+        key = '·'.join(group_parts)
+        group = groups.setdefault(key, {
+            'region': key,
+            'display_name': ' · '.join(
+                [group_parts[0], group_parts[-1]]
+                if len(group_parts) > 1 else group_parts
+            ),
+            'market_count': 0,
+            'tag_counts': {},
+        })
+        group['market_count'] += 1
+        candidates = _parse_tags(row['tags'])
+        if row['category'] and row['category'] not in generic_tags:
+            candidates.append(row['category'])
+        for tag in candidates:
+            tag = str(tag).strip()
+            if (not tag or tag in generic_tags or tag in group_parts or len(tag) > 8
+                    or re.search(r'(省|市|区|县|乡|镇|村|街道|社区)$', tag)
+                    or tag in {'360地图POI', '高德POI', '待核实'}):
+                continue
+            group['tag_counts'][tag] = group['tag_counts'].get(tag, 0) + 1
+
+    items = sorted(
+        groups.values(), key=lambda item: (-item['market_count'], item['region'])
+    )[:limit]
+    for item in items:
+        item['featured_tags'] = [
+            tag for tag, _ in sorted(
+                item.pop('tag_counts').items(), key=lambda pair: (-pair[1], pair[0])
+            )[:3]
+        ]
+    return ok(items)
+
+
 @app.route('/api/admin/region-map-stats', methods=['GET'])
 @admin_required
 def admin_region_map_stats():

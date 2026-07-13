@@ -7311,6 +7311,32 @@ function _updateCategoryList(cats) {
   let selectedMapProviderV2 = 'amap';
   let navigationSettingOnlyV2 = false;
   let regionSelectionTargetV2 = 'home';
+  let popularRegionsLoadedV2 = false;
+
+  function escapeRegionV2(value){
+    return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  }
+
+  async function loadPopularRegionsV2(){
+    if (popularRegionsLoadedV2) return;
+    try {
+      const response = await fetch('/api/regions/popular?limit=4');
+      const payload = await response.json();
+      if (!response.ok || payload.code !== 200 || !payload.data?.length) return;
+      const list = document.getElementById('region-v2-hot-list');
+      if (!list) return;
+      list.innerHTML = payload.data.map(item => {
+        const region = escapeRegionV2(item.region);
+        const name = escapeRegionV2(item.display_name || item.region);
+        const tags = escapeRegionV2((item.featured_tags || []).join('、') || '本地特色集市');
+        const search = escapeRegionV2(`${item.region} ${(item.featured_tags || []).join(' ')}`);
+        return `<button class="region-v2-hot" type="button" data-search="${search}" onclick="selectRegionV2('${region}')"><span class="region-v2-dot"></span><span class="region-v2-hot-copy"><span class="region-v2-hot-name">${name}</span><span class="region-v2-hot-tags">${tags}</span></span><span class="region-v2-count">${Number(item.market_count)||0} 个集市</span></button>`;
+      }).join('');
+      popularRegionsLoadedV2 = true;
+    } catch (error) {
+      console.warn('旅行热门地区接口暂不可用，保留设计稿示例', error);
+    }
+  }
 
   window.openRegionSearchV2 = function(target='home'){
     regionSelectionTargetV2 = target;
@@ -7323,6 +7349,7 @@ function _updateCategoryList(cats) {
       : document.getElementById('loc-name-display')?.textContent || '临沂市 · 兰山区';
     setText('region-v2-current-name',current.replace(/市(?=[^·])/,'市 · '));
     document.querySelector('.user-scroll-body')?.scrollTo?.({top:0});
+    loadPopularRegionsV2();
   };
 
   window.closeRegionSearchV2 = function(){
@@ -7487,6 +7514,7 @@ function _updateCategoryList(cats) {
     if (mode === 'region-search') {
       document.body.classList.add('region-v2-active');
       document.getElementById('user-page-region-v2')?.classList.remove('hidden');
+      loadPopularRegionsV2();
       return true;
     }
     const context = document.getElementById('user-page-trigger-v2'); context?.classList.remove('hidden');
