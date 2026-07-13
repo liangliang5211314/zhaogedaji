@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zhaogedaji.app/schemas/open_time.v2.schema.json",
+  "title": "MarketOpenTimeV2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "timezone",
+    "type",
+    "time_slots",
+    "rule",
+    "exceptions",
+    "migration_status"
+  ],
+  "properties": {
+    "version": { "const": 2 },
+    "timezone": { "type": "string", "default": "Asia/Shanghai" },
+    "type": {
+      "enum": ["daily", "lunar", "solar", "weekly", "specific_dates"]
+    },
+    "time_slots": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/time_slot" },
+      "default": []
+    },
+    "rule": { "type": "object" },
+    "exceptions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/exception" },
+      "default": []
+    },
+    "source_text": { "type": "string", "default": "" },
+    "migration_status": {
+      "enum": ["native", "migrated", "needs_review"],
+      "default": "native"
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "type": { "const": "daily" } } },
+      "then": { "properties": { "rule": { "$ref": "#/$defs/daily_rule" } } }
+    },
+    {
+      "if": { "properties": { "type": { "const": "lunar" } } },
+      "then": { "properties": { "rule": { "$ref": "#/$defs/lunar_rule" } } }
+    },
+    {
+      "if": { "properties": { "type": { "const": "solar" } } },
+      "then": { "properties": { "rule": { "$ref": "#/$defs/solar_rule" } } }
+    },
+    {
+      "if": { "properties": { "type": { "const": "weekly" } } },
+      "then": { "properties": { "rule": { "$ref": "#/$defs/weekly_rule" } } }
+    },
+    {
+      "if": { "properties": { "type": { "const": "specific_dates" } } },
+      "then": {
+        "properties": { "rule": { "$ref": "#/$defs/specific_dates_rule" } }
+      }
+    }
+  ],
+  "$defs": {
+    "time_text": {
+      "type": "string",
+      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    },
+    "time_slot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "$ref": "#/$defs/time_text" },
+        "end": { "$ref": "#/$defs/time_text" }
+      }
+    },
+    "daily_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "maxProperties": 0
+    },
+    "lunar_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["days", "leap_month"],
+      "properties": {
+        "days": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "integer", "minimum": 1, "maximum": 30 }
+        },
+        "leap_month": {
+          "enum": ["exclude", "include", "only"],
+          "default": "exclude"
+        }
+      }
+    },
+    "solar_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["days"],
+      "properties": {
+        "days": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "integer", "minimum": 1, "maximum": 31 }
+        }
+      }
+    },
+    "weekly_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["weekdays"],
+      "properties": {
+        "weekdays": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "integer", "minimum": 1, "maximum": 7 }
+        }
+      }
+    },
+    "specific_date": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["calendar", "month", "day", "duration_days"],
+      "properties": {
+        "calendar": { "enum": ["lunar", "solar"] },
+        "year": { "type": "integer", "minimum": 1900, "maximum": 2099 },
+        "month": { "type": "integer", "minimum": 1, "maximum": 12 },
+        "day": { "type": "integer", "minimum": 1, "maximum": 31 },
+        "duration_days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30,
+          "default": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "calendar": { "const": "lunar" } },
+            "required": ["calendar"]
+          },
+          "then": {
+            "properties": { "day": { "maximum": 30 } }
+          }
+        }
+      ]
+    },
+    "specific_dates_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entries"],
+      "properties": {
+        "entries": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/specific_date" }
+        }
+      }
+    },
+    "exception": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["date", "action", "reason", "source", "updated_at"],
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "action": {
+          "enum": ["closed", "open_override", "time_override"]
+        },
+        "time_slots": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/time_slot" }
+        },
+        "reason": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "action": { "const": "time_override" } },
+            "required": ["action"]
+          },
+          "then": {
+            "required": ["time_slots"],
+            "properties": { "time_slots": { "minItems": 1 } }
+          }
+        }
+      ]
+    }
+  }
+}
