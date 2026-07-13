@@ -2,7 +2,7 @@
 找个大集 · 服务器端 API v2.0
 在原有基础上新增：用户系统、JWT认证、收藏、点评、公告、轮播图
 """
-import os, json, uuid, sqlite3, hashlib, hmac, random, time, re, logging
+import os, json, uuid, sqlite3, hashlib, hmac, random, time, re, logging, math
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, request, jsonify, send_from_directory
@@ -15,7 +15,10 @@ try:
     ADMIN_KEY  = _cfg.ADMIN_KEY
     JWT_SECRET = _cfg.JWT_SECRET
 except ImportError:
-    DB_PATH    = os.path.join(os.path.dirname(__file__), 'data', 'zhaojishi.db')
+    DB_PATH    = os.environ.get(
+        'ZHAOGEDAJI_DB_PATH',
+        os.path.join(os.path.dirname(__file__), 'data', 'zhaojishi.db'),
+    )
     API_SECRET = os.environ.get('API_SECRET', 'zhaojishi_secret_2024')
     ADMIN_KEY  = os.environ.get('ADMIN_KEY',  'admin_zhaojishi_2024')
     JWT_SECRET = os.environ.get('JWT_SECRET', 'zhaojishi_jwt_2025')
@@ -1449,6 +1452,63 @@ def list_markets():
     return jsonify({'code': 200, 'data': {'list': markets, 'total': total, 'page': page},
                     # 兼容旧格式
                     'markets': markets, 'total': total})
+
+
+def _haversine_m(lat1, lng1, lat2, lng2):
+    radius = 6371008.8
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lng2 - lng1)
+    value = (math.sin(dphi / 2) ** 2
+             + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2)
+    return radius * 2 * math.atan2(math.sqrt(value), math.sqrt(1 - value))
+
+
+@app.route('/api/markets/nearby', methods=['GET'])
+def nearby_markets():
+    """Return published, geocoded markets sorted by distance.
+
+    ``radius`` is expressed in kilometres; each result ``distance`` is metres.
+    """
+    try:
+        lat = float(request.args['lat'])
+        lng = float(request.args['lng'])
+        radius_km = float(request.args.get('radius', 50))
+        limit = int(request.args.get('limit', 50))
+    except (KeyError, TypeError, ValueError):
+        return jsonify({'code': 400, 'msg': 'lat、lng、radius 或 limit 参数无效'}), 400
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        return jsonify({'code': 400, 'msg': '坐标超出有效范围'}), 400
+    if radius_km <= 0 or limit <= 0:
+        return jsonify({'code': 400, 'msg': 'radius 和 limit 必须大于 0'}), 400
+    radius_m = min(radius_km, 1000) * 1000
+    limit = min(limit, 200)
+
+    conn = get_db()
+    rows = conn.execute(
+        """SELECT * FROM markets
+           WHERE status='published' AND lat IS NOT NULL AND lng IS NOT NULL
+             AND lat!=0 AND lng!=0"""
+    ).fetchall()
+    conn.close()
+    items = []
+    for row in rows:
+        distance = _haversine_m(lat, lng, float(row['lat']), float(row['lng']))
+        if distance > radius_m:
+            continue
+        item = dict(row)
+        item['distance'] = int(round(distance))
+        item['tags'] = _parse_tags(item.get('tags'))
+        try:
+            open_time = json.loads(item.get('open_time') or '{}')
+            item['openTime'] = open_time if isinstance(open_time, dict) else {'type': 'custom', 'custom': str(open_time)}
+        except (TypeError, ValueError):
+            item['openTime'] = {'type': 'custom', 'custom': item.get('open_time', '')}
+        items.append(item)
+    items.sort(key=lambda item: (item['distance'], -(item.get('rating') or 0)))
+    items = items[:limit]
+    return jsonify({'code': 200, 'data': {'list': items, 'total': len(items)},
+                    'markets': items, 'total': len(items)})
 
 
 @app.route('/api/markets', methods=['POST'])
