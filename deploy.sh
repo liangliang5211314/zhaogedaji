@@ -50,7 +50,6 @@ find_venv() {
 
 find_venv
 if [ -x "$VENV/bin/python3" ]; then PY="$VENV/bin/python3"; else PY="$VENV/bin/python"; fi
-if [ -x "$VENV/bin/pip3" ]; then PIP="$VENV/bin/pip3"; else PIP="$VENV/bin/pip"; fi
 GUNICORN="$VENV/bin/gunicorn"
 
 cd "$PROJECT"
@@ -145,7 +144,7 @@ git merge --ff-only "$TARGET_COMMIT"
 
 CURRENT_STEP="安装依赖"
 if [ -f requirements.txt ]; then
-    "$PIP" install -r requirements.txt --quiet
+    "$PY" -m pip install -r requirements.txt --quiet
 fi
 
 CURRENT_STEP="初始化数据库结构"
