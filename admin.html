@@ -1552,6 +1552,7 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;}
         <div class="page-header">
           <div><h1>🔔 开集提醒</h1><p>查看用户设置的提醒订阅，发布通知时使用</p></div>
           <div style="display:flex;gap:8px;">
+            <button class="btn btn-ghost" onclick="buildReminderTasksNow()">⚙️ 生成当前时段任务</button>
             <button class="btn btn-ghost" onclick="renderRemindersPage()">🔄 刷新</button>
           </div>
         </div>
@@ -1567,13 +1568,17 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;}
             </div>
             <div id="reminders-list" style="min-height:200px;"></div>
           </div>
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-header"><div class="card-title">📨 待发送任务</div><span id="rm-task-total" style="font-size:12px;color:var(--gray);"></span></div>
+            <div id="reminder-tasks-list" style="min-height:100px;"></div>
+          </div>
           <div class="card">
-            <div class="card-header"><div class="card-title">📋 推送说明</div></div>
+            <div class="card-header"><div class="card-title">📋 调度规则</div></div>
             <div style="padding:14px 18px;font-size:13px;color:var(--gray);line-height:1.8;">
-              <p>• <strong>提醒一次</strong>：下次开集前一天手动推送，推送后点击「标记已发送」将状态改为已触发</p>
-              <p>• <strong>长期提醒</strong>：每次开集前一天均需推送，不会自动变为已触发状态</p>
-              <p>• 推送渠道接入公众号/APP后，此处将提供一键发送功能</p>
-              <p>• 可导出 openid 列表用于微信公众号模板消息批量推送</p>
+              <p>• 系统固定在<strong>开集前一天 20:00</strong>与<strong>开集当天 06:30</strong>生成两次提醒任务，重复运行不会重复建单。</p>
+              <p>• <strong>每日营业</strong>类集市不提供开集提醒；集期处于 needs_review 的记录也不会生成任务。</p>
+              <p>• 提醒一次在最后一个已开启时段发送后自动结束；长期提醒在每个开集日持续生成。</p>
+              <p>• 当前先生成待发送队列，微信公众号/APP 推送执行器从该队列消费并回写发送状态。</p>
             </div>
           </div>
         </div>
@@ -5210,8 +5215,8 @@ async function openMarketEditModal(idx) {
             <option value="daily">🏪 每天开放（菜市场/夜市等）</option>
             <option value="lunar">🌙 按农历（逢几赶集，北方大集常用）</option>
             <option value="solar">☀️ 按阳历（每月固定日期）</option>
-            <option value="weekday">📅 按星期（每周固定星期几）</option>
-            <option value="custom">✏️ 自定义（庙会/节假日等特殊情况）</option>
+            <option value="weekly">📅 按星期（每周固定星期几）</option>
+            <option value="specific_dates">🎪 指定日期（庙会可一年多次）</option>
           </select>
 
           <!-- 每天开放面板 -->
@@ -5227,6 +5232,7 @@ async function openMarketEditModal(idx) {
 
           <!-- 农历面板 -->
           <div id="medit-panel-lunar" class="admin-time-panel">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;color:var(--gray);"><span>闰月规则</span><select class="cms-input" id="medit-lunar-leap" style="width:150px;padding:6px 8px;"><option value="exclude">不含闰月</option><option value="include">普通月和闰月</option><option value="only">仅闰月</option></select></div>
             <div style="margin-bottom:10px;">
               <div style="font-size:11px;color:var(--gray);margin-bottom:6px;font-weight:600;">⚡ 常见5天一集快捷选择：</div>
               <div style="display:flex;flex-wrap:wrap;gap:6px;" id="medit-lunar-presets">
@@ -5262,23 +5268,16 @@ async function openMarketEditModal(idx) {
           </div>
 
           <!-- 星期面板 -->
-          <div id="medit-panel-weekday" class="admin-time-panel" style="display:none;">
+          <div id="medit-panel-weekly" class="admin-time-panel" style="display:none;">
             <div style="font-size:11px;color:var(--gray);margin-bottom:6px;">选择每周哪几天开集（可多选）：</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;" id="medit-weekday-picker">
-              ${[['周一',1],['周二',2],['周三',3],['周四',4],['周五',5],['周六',6],['周日',0]].map(([n,v])=>`<label class="admin-day-chip"><input type="checkbox" value="${v}"> ${n}</label>`).join('')}
+              ${[['周一',1],['周二',2],['周三',3],['周四',4],['周五',5],['周六',6],['周日',7]].map(([n,v])=>`<label class="admin-day-chip"><input type="checkbox" value="${v}"> ${n}</label>`).join('')}
             </div>
           </div>
 
-          <!-- 自定义面板 -->
-          <div id="medit-panel-custom" class="admin-time-panel" style="display:none;">
-            <input class="cms-input" id="medit-time-custom" value="${m.time||''}" placeholder="如：每年正月庙会、节假日不定期开市..." style="margin-bottom:8px;">
-            <div style="background:#FFFBF0;border:1px solid #F5DFA0;border-radius:10px;padding:11px 14px;font-size:12px;color:#666;line-height:1.6;">
-              💬 <strong style="color:#333;">不确定此地区集市规律？</strong><br>
-              南方很多地区有独特的集市时间，如您了解当地信息，欢迎反馈：<br>
-              <a href="mailto:feedback@zhaojishi.com?subject=集市日期规律反馈&body=集市名称：%0A所在地区：%0A开集规律：" style="color:var(--red);font-weight:600;text-decoration:none;">📮 发邮件告诉我们 →</a>
-              <span style="color:#aaa;margin:0 6px;">|</span>
-              <span style="color:#999;">也可在自定义中填写您了解的信息，我们会人工核实。</span>
-            </div>
+          <div id="medit-panel-specific_dates" class="admin-time-panel" style="display:none;">
+            <div id="medit-specific-list"></div>
+            <button type="button" class="btn btn-sm btn-ghost" onclick="addSpecificDateRow('medit')">＋ 添加指定日期</button>
           </div>
 
           <!-- 时段 -->
@@ -5287,6 +5286,10 @@ async function openMarketEditModal(idx) {
             <input type="time" class="cms-input" id="medit-time-start" value="06:00" style="flex:1;">
             <span style="color:var(--gray);">至</span>
             <input type="time" class="cms-input" id="medit-time-end" value="12:00" style="flex:1;">
+          </div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--paper-dark);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><span style="font-size:12px;font-weight:700;">停市 / 临时加场例外</span><button type="button" class="btn btn-sm btn-ghost" onclick="addOpenTimeExceptionRow('medit')">＋ 添加例外</button></div>
+            <div id="medit-exception-list"></div>
           </div>
         </div>
         <div class="cms-form-row"><label class="cms-label">联系电话</label><input class="cms-input" id="medit-phone" value="${m.phone||''}" placeholder="联系电话"></div>
@@ -5592,7 +5595,9 @@ function meditGeoHint() {
 async function saveMarketEdit(idx) {
   const name = document.getElementById('medit-name')?.value?.trim();
   const addr = document.getElementById('medit-addr')?.value?.trim();
-  const openTime = adminCollectTimeData('medit');
+  let openTime;
+  try { openTime = adminCollectTimeData('medit'); }
+  catch (error) { showToast('❌ ' + error.message); return; }
   if(!name||!addr) { showToast('请填写必填项（名称/地址）'); return; }
   const catMap = {'早市':'🌅','集市':'🏮','夜市':'🌙','农贸市场':'🌾','宠物市场':'🐾','古玩市场':'🏺'};
   const bgMap = {'早市':'linear-gradient(135deg,#FFF4E0,#FFE0A0)','集市':'linear-gradient(135deg,#FFF0E8,#F8D0B0)','夜市':'linear-gradient(135deg,#1A1830,#2A2860)','农贸市场':'linear-gradient(135deg,#E8F5E0,#C8E8A8)','宠物市场':'linear-gradient(135deg,#E0F8F0,#A8E8D0)','古玩市场':'linear-gradient(135deg,#F5ECD8,#E8D4A8)'};
@@ -8946,37 +8951,126 @@ function formatOpenTimeAdmin(timeObj) {
 
 function adminSwitchTimeType(type, prefix) {
   prefix = prefix || 'medit';
-  // 兼容旧数据：monthly → solar
   if (type === 'monthly') type = 'solar';
+  if (type === 'weekday') type = 'weekly';
+  if (type === 'festival' || type === 'custom') type = 'specific_dates';
   const sel = document.getElementById(`${prefix}-time-type`);
   if (sel && sel.value !== type) sel.value = type;
   document.querySelectorAll(`[id^="${prefix}-panel-"]`).forEach(p=>p.style.display='none');
   const panel = document.getElementById(`${prefix}-panel-${type}`);
   if (panel) panel.style.display = 'block';
+  if (type === 'specific_dates' && !document.querySelector(`#${prefix}-specific-list .open-time-specific-row`)) {
+    addSpecificDateRow(prefix);
+  }
+}
+
+function addSpecificDateRow(prefix, entry = {}) {
+  const list = document.getElementById(`${prefix}-specific-list`);
+  if (!list) return;
+  const row = document.createElement('div');
+  row.className = 'open-time-specific-row';
+  row.style.cssText = 'display:grid;grid-template-columns:88px 82px 1fr 1fr 82px 32px;gap:6px;align-items:center;margin-bottom:7px;';
+  row.innerHTML = `
+    <select class="cms-input ot-calendar" style="padding:7px;"><option value="solar">阳历</option><option value="lunar">阴历</option></select>
+    <input class="cms-input ot-year" type="number" min="1900" max="2099" placeholder="每年" value="${entry.year||''}" style="padding:7px;">
+    <input class="cms-input ot-month" type="number" min="1" max="12" placeholder="月" value="${entry.month||''}" style="padding:7px;">
+    <input class="cms-input ot-day" type="number" min="1" max="31" placeholder="日" value="${entry.day||''}" style="padding:7px;">
+    <input class="cms-input ot-duration" type="number" min="1" max="30" title="持续天数" value="${entry.duration_days||1}" style="padding:7px;">
+    <button type="button" class="btn btn-sm btn-ghost" onclick="this.closest('.open-time-specific-row').remove()" title="删除">×</button>`;
+  row.querySelector('.ot-calendar').value = entry.calendar || 'solar';
+  list.appendChild(row);
+}
+
+function addOpenTimeExceptionRow(prefix, item = {}) {
+  const list = document.getElementById(`${prefix}-exception-list`);
+  if (!list) return;
+  const row = document.createElement('div');
+  row.className = 'open-time-exception-row';
+  row.style.cssText = 'display:grid;grid-template-columns:130px 120px 1fr 86px 86px 32px;gap:6px;align-items:center;margin-bottom:7px;';
+  row.innerHTML = `
+    <input class="cms-input oe-date" type="date" value="${item.date||''}" style="padding:7px;">
+    <select class="cms-input oe-action" style="padding:7px;"><option value="closed">停市</option><option value="open_override">临时加场</option><option value="time_override">调整时段</option></select>
+    <input class="cms-input oe-reason" value="${_esc(item.reason||'')}" placeholder="原因（必填）" style="padding:7px;">
+    <input class="cms-input oe-start" type="time" value="${item.time_slots?.[0]?.start||''}" title="调整后开始" style="padding:7px;">
+    <input class="cms-input oe-end" type="time" value="${item.time_slots?.[0]?.end||''}" title="调整后结束" style="padding:7px;">
+    <button type="button" class="btn btn-sm btn-ghost" onclick="this.closest('.open-time-exception-row').remove()" title="删除">×</button>`;
+  row.querySelector('.oe-action').value = item.action || 'closed';
+  list.appendChild(row);
 }
 
 function adminCollectTimeData(prefix) {
   prefix = prefix || 'medit';
   const sel = document.getElementById(`${prefix}-time-type`);
-  let type = sel ? sel.value : 'custom';
+  let type = sel ? sel.value : 'daily';
+  if (type === 'weekday') type = 'weekly';
+  if (type === 'festival' || type === 'custom') type = 'specific_dates';
   const start = document.getElementById(`${prefix}-time-start`)?.value || '';
   const end   = document.getElementById(`${prefix}-time-end`)?.value || '';
+  if ((start && !end) || (!start && end)) throw new Error('开集时段必须同时填写开始和结束时间');
+  const timeSlots = start && end ? [{ start, end }] : [];
+  let rule = {};
+  let sourceText = '';
   if (type === 'daily') {
-    return { type:'daily', start, end };
-  }
-  if (type === 'lunar') {
+    sourceText = '每日营业，特殊天气及通知除外';
+  } else if (type === 'lunar') {
     const days = [...document.querySelectorAll(`#${prefix}-lunar-picker input:checked`)].map(c=>+c.value);
-    return { type:'lunar', days, start, end };
-  }
-  if (type === 'solar') {
+    if (!days.length) throw new Error('请至少选择一个阴历开集日');
+    rule = { days, leap_month: document.getElementById(`${prefix}-lunar-leap`)?.value || 'exclude' };
+    sourceText = `阴历每月${days.join('、')}日`;
+  } else if (type === 'solar') {
     const days = [...document.querySelectorAll(`#${prefix}-solar-picker input:checked`)].map(c=>+c.value);
-    return { type:'solar', days, start, end };
+    if (!days.length) throw new Error('请至少选择一个阳历开集日');
+    rule = { days };
+    sourceText = `阳历每月${days.join('、')}日`;
+  } else if (type === 'weekly') {
+    const weekdays = [...document.querySelectorAll(`#${prefix}-weekday-picker input:checked`)].map(c=>+c.value);
+    if (!weekdays.length) throw new Error('请至少选择一个星期');
+    rule = { weekdays };
+    sourceText = `每周 ${weekdays.join('、')}`;
+  } else if (type === 'specific_dates') {
+    const entries = [...document.querySelectorAll(`#${prefix}-specific-list .open-time-specific-row`)].map(row => {
+      const entry = {
+        calendar: row.querySelector('.ot-calendar').value,
+        month: +row.querySelector('.ot-month').value,
+        day: +row.querySelector('.ot-day').value,
+        duration_days: +row.querySelector('.ot-duration').value || 1,
+      };
+      const year = +row.querySelector('.ot-year').value;
+      if (year) entry.year = year;
+      return entry;
+    });
+    if (!entries.length || entries.some(e=>!e.month || !e.day)) throw new Error('请完整填写至少一个指定日期');
+    rule = { entries };
+    sourceText = entries.map(e=>`${e.calendar==='lunar'?'阴历':'阳历'}${e.year?e.year+'年':'每年'}${e.month}月${e.day}日`).join('、');
   }
-  if (type === 'weekday') {
-    const days = [...document.querySelectorAll(`#${prefix}-weekday-picker input:checked`)].map(c=>+c.value);
-    return { type:'weekday', days, start, end };
-  }
-  return { type:'custom', custom: document.getElementById(`${prefix}-time-custom`)?.value||'', start, end };
+  const exceptions = [...document.querySelectorAll(`#${prefix}-exception-list .open-time-exception-row`)].map(row => {
+    const action = row.querySelector('.oe-action').value;
+    const item = {
+      date: row.querySelector('.oe-date').value,
+      action,
+      reason: row.querySelector('.oe-reason').value.trim(),
+      source: 'admin',
+      updated_at: new Date().toISOString(),
+    };
+    const exStart = row.querySelector('.oe-start').value;
+    const exEnd = row.querySelector('.oe-end').value;
+    if (action === 'time_override') {
+      if (!exStart || !exEnd) throw new Error('调整时段例外必须填写开始和结束时间');
+      item.time_slots = [{ start: exStart, end: exEnd }];
+    }
+    if (!item.date || !item.reason) throw new Error('例外日期与原因不能为空');
+    return item;
+  });
+  return {
+    version: 2,
+    timezone: 'Asia/Shanghai',
+    type,
+    time_slots: timeSlots,
+    rule,
+    exceptions,
+    source_text: sourceText,
+    migration_status: 'native',
+  };
 }
 
 // 回填时间数据到表单
@@ -8984,27 +9078,47 @@ function adminFillTimeData(prefix, timeObj) {
   if (!timeObj) return;
   if (typeof timeObj === 'string') {
     try { timeObj = JSON.parse(timeObj); } catch(e){
-      const el = document.getElementById(`${prefix}-time-custom`);
-      if (el) el.value = timeObj;
-      adminSwitchTimeType('custom', prefix);
+      adminSwitchTimeType('specific_dates', prefix);
       return;
     }
   }
-  // 兼容旧数据
-  if (timeObj.type === 'monthly') timeObj.type = 'solar';
-  adminSwitchTimeType(timeObj.type, prefix);
-  if (timeObj.start) { const el = document.getElementById(`${prefix}-time-start`); if(el) el.value = timeObj.start; }
-  if (timeObj.end)   { const el = document.getElementById(`${prefix}-time-end`);   if(el) el.value = timeObj.end; }
-  if (timeObj.days) {
-    const calType = timeObj.type === 'lunar' ? 'lunar' : timeObj.type === 'solar' ? 'solar' : timeObj.type === 'weekday' ? 'weekday' : null;
+  const isV2 = timeObj.version === 2;
+  let type = timeObj.type;
+  if (type === 'monthly') type = 'solar';
+  if (type === 'weekday') type = 'weekly';
+  if (type === 'festival' || type === 'custom') type = 'specific_dates';
+  adminSwitchTimeType(type, prefix);
+  const slots = isV2 ? timeObj.time_slots : ((timeObj.start && timeObj.end) ? [{start:timeObj.start,end:timeObj.end}] : []);
+  if (slots?.[0]) {
+    const startEl = document.getElementById(`${prefix}-time-start`), endEl = document.getElementById(`${prefix}-time-end`);
+    if (startEl) startEl.value = slots[0].start;
+    if (endEl) endEl.value = slots[0].end;
+  }
+  const rule = isV2 ? timeObj.rule : timeObj;
+  const days = rule?.days;
+  if (days) {
+    const calType = type === 'lunar' ? 'lunar' : type === 'solar' ? 'solar' : null;
     if (calType) {
       document.querySelectorAll(`#${prefix}-${calType}-picker input`).forEach(cb=>{
-        cb.checked = timeObj.days.includes(+cb.value);
+        cb.checked = days.includes(+cb.value);
       });
       meditSyncPreset(calType, prefix);
     }
   }
-  if (timeObj.custom) { const el = document.getElementById(`${prefix}-time-custom`); if(el) el.value = timeObj.custom; }
+  if (type === 'lunar') {
+    const leap = document.getElementById(`${prefix}-lunar-leap`);
+    if (leap) leap.value = rule?.leap_month || 'exclude';
+  }
+  if (type === 'weekly') {
+    const weekdays = rule?.weekdays || timeObj.days || [];
+    document.querySelectorAll(`#${prefix}-weekday-picker input`).forEach(cb=>cb.checked=weekdays.includes(+cb.value));
+  }
+  const specificList = document.getElementById(`${prefix}-specific-list`);
+  if (specificList) specificList.innerHTML = '';
+  if (type === 'specific_dates') (rule?.entries || []).forEach(entry=>addSpecificDateRow(prefix, entry));
+  const exceptionList = document.getElementById(`${prefix}-exception-list`);
+  if (exceptionList) exceptionList.innerHTML = '';
+  (timeObj.exceptions || []).forEach(item=>addOpenTimeExceptionRow(prefix, item));
 }
 
 // 快捷预设按钮：选中对应日期（prefix 参数化）
@@ -9753,7 +9867,7 @@ async function renderReviewsPage() {
   if (!res || res.code !== 200) {
     body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray);">加载失败</div>'; return;
   }
-  const items = res.data || res.reviews || [];
+  const items = res.data?.list || res.reviews || [];
   if (!items.length) {
     body.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray);"><div style="font-size:40px;margin-bottom:12px;">📝</div>暂无待审核点评</div>'; return;
   }
@@ -9767,6 +9881,8 @@ async function renderReviewsPage() {
         <span style="font-size:11px;color:var(--gray);">${(r.created_at||'').slice(0,10)}</span>
       </div>
       <div style="font-size:13px;color:var(--ink);margin-bottom:10px;">${r.content||''}</div>
+      ${(r.images||[]).length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">${r.images.map(src=>`<a href="${_esc(src)}" target="_blank" rel="noopener"><img src="${_esc(src)}" alt="点评图片" style="width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--paper-dark);"></a>`).join('')}</div>` : ''}
+      ${(r.videos||[]).length ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:10px;">${r.videos.map(src=>`<video controls preload="metadata" src="${_esc(src)}" style="width:100%;max-height:180px;border-radius:8px;background:#111;"></video>`).join('')}</div>` : ''}
       <div style="display:flex;gap:8px;">
         <button onclick="approveReviewApi(${r.id})"
           style="padding:6px 16px;background:#2D7A4F;color:white;border:none;border-radius:8px;font-size:13px;cursor:pointer;">
@@ -9785,7 +9901,9 @@ async function approveReviewApi(id) {
   if (res?.code === 200) { showToast('已通过'); renderReviewsPage(); }
 }
 async function rejectReviewApi(id) {
-  const res = await API.post(`/admin/reviews/${id}/reject`, {});
+  const reason = await showPrompt('请输入拒绝原因（会记录到审核日志）：', '内容不符合展示规范');
+  if (reason === null || !reason.trim()) return;
+  const res = await API.post(`/admin/reviews/${id}/reject`, { reason: reason.trim() });
   if (res?.code === 200) { showToast('已拒绝'); renderReviewsPage(); }
 }
 
@@ -9795,7 +9913,9 @@ async function apiApproveReview(rid) {
   if (res?.code === 200) { showToast('已通过 ✅'); renderReviewsPage(); }
 }
 async function apiRejectReview(rid) {
-  const res = await API.post(`/admin/reviews/${rid}/reject`);
+  const reason = await showPrompt('请输入拒绝原因（会记录到审核日志）：', '内容不符合展示规范');
+  if (reason === null || !reason.trim()) return;
+  const res = await API.post(`/admin/reviews/${rid}/reject`, { reason: reason.trim() });
   if (res?.code === 200) { showToast('已拒绝'); renderReviewsPage(); }
 }
 
@@ -9924,13 +10044,31 @@ function _adminDetectPattern(days) {
   return gap === 5 ? `逢${N[s[0]]||s[0]}逢${N[s[1]]||s[1]}` : `逢${N[s[0]]||s[0]}`;
 }
 const _WD = ['周日','周一','周二','周三','周四','周五','周六'];
+const _WDI = {1:'周一',2:'周二',3:'周三',4:'周四',5:'周五',6:'周六',7:'周日'};
 const _LD = {1:'初一',2:'初二',3:'初三',4:'初四',5:'初五',6:'初六',7:'初七',8:'初八',9:'初九',10:'初十',11:'十一',12:'十二',13:'十三',14:'十四',15:'十五',16:'十六',17:'十七',18:'十八',19:'十九',20:'二十',21:'二十一',22:'二十二',23:'二十三',24:'二十四',25:'二十五',26:'二十六',27:'二十七',28:'二十八',29:'二十九',30:'三十'};
 function _fmtOpenTime(raw) {
   if (!raw) return '-';
   let ot = null;
   try { ot = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch {}
   if (ot && typeof ot === 'object') {
-    if (ot.type === 'daily') return '天天开集';
+    if (ot.type === 'daily') return '每日营业';
+    if (ot.version === 2 && ot.type === 'lunar') {
+      const days = ot.rule?.days || [];
+      const lbl = _adminDetectPattern(days);
+      return lbl ? '阴历' + lbl : `阴历每月${days.length}次`;
+    }
+    if (ot.version === 2 && ot.type === 'solar') {
+      const days = ot.rule?.days || [];
+      return days.length <= 3 ? `阳历每月${days.join('/')}日` : `阳历每月${days.length}次`;
+    }
+    if (ot.version === 2 && ot.type === 'weekly') {
+      const days = ot.rule?.weekdays || [];
+      return days.length <= 3 ? days.map(x=>_WDI[x]||x).join('/') : `每周${days.length}天`;
+    }
+    if (ot.version === 2 && ot.type === 'specific_dates') {
+      const entries = ot.rule?.entries || [];
+      return entries.length ? `指定日期 ${entries.length} 场` : '指定日期';
+    }
     if (ot.type === 'lunar') {
       const lbl = ot.text || ot.label || _adminDetectPattern(ot.days||[]);
       if (lbl) return '农历' + lbl;
@@ -9979,7 +10117,8 @@ function _fmtOpenTimeFull(raw) {
     return String(raw).replace(/^"+|"+$/g, '').trim();
   }
   // 结构化对象：返回可读全文
-  if (ot.type === 'daily') return '天天开集';
+  if (ot.type === 'daily') return '每日营业';
+  if (ot.version === 2 && ot.source_text) return ot.source_text;
   if (ot.type === 'custom' || !ot.type) return (ot.custom || ot.text || ot.desc || '').replace(/^"+|"+$/g, '').trim();
   if (ot.type === 'lunar') {
     if (ot.text || ot.label) return '农历' + (ot.text || ot.label);
@@ -10396,15 +10535,15 @@ async function editMarket(id) {
             <option value="daily">🏪 每天开放</option>
             <option value="lunar">🌙 按农历</option>
             <option value="solar">☀️ 按阳历</option>
-            <option value="weekday">📅 按星期</option>
-            <option value="festival">🎪 庙会/节日</option>
-            <option value="custom">✏️ 自定义</option>
+            <option value="weekly">📅 按星期</option>
+            <option value="specific_dates">🎪 指定日期（可多次）</option>
           </select>
 
           <div id="em-panel-daily" class="admin-time-panel" style="display:none;">
             <div style="padding:10px 14px;background:rgba(45,122,79,.08);border-radius:8px;border:1px solid rgba(45,122,79,.2);font-size:13px;color:#2D7A4F;font-weight:600;">🏪 每天正常营业</div>
           </div>
           <div id="em-panel-lunar" class="admin-time-panel" style="display:none;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;color:var(--gray);"><span>闰月规则</span><select class="cms-input" id="em-lunar-leap" style="width:150px;padding:6px 8px;"><option value="exclude">不含闰月</option><option value="include">普通月和闰月</option><option value="only">仅闰月</option></select></div>
             <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;" id="em-lunar-presets">
               <button type="button" onclick="meditPreset('lunar',[1,6,11,16,21,26],this,'em')" class="preset-chip">逢一逢六</button>
               <button type="button" onclick="meditPreset('lunar',[2,7,12,17,22,27],this,'em')" class="preset-chip">逢二逢七</button>
@@ -10428,16 +10567,14 @@ async function editMarket(id) {
               ${Array.from({length:31},(_,i)=>`<label class="admin-day-chip"><input type="checkbox" value="${i+1}" onchange="meditSyncPreset('solar','em')"> ${i+1}日</label>`).join('')}
             </div>
           </div>
-          <div id="em-panel-weekday" class="admin-time-panel" style="display:none;">
+          <div id="em-panel-weekly" class="admin-time-panel" style="display:none;">
             <div style="display:flex;gap:8px;flex-wrap:wrap;" id="em-weekday-picker">
-              ${[['周一',1],['周二',2],['周三',3],['周四',4],['周五',5],['周六',6],['周日',0]].map(([n,v])=>`<label class="admin-day-chip"><input type="checkbox" value="${v}"> ${n}</label>`).join('')}
+              ${[['周一',1],['周二',2],['周三',3],['周四',4],['周五',5],['周六',6],['周日',7]].map(([n,v])=>`<label class="admin-day-chip"><input type="checkbox" value="${v}"> ${n}</label>`).join('')}
             </div>
           </div>
-          <div id="em-panel-festival" class="admin-time-panel" style="display:none;">
-            <input class="cms-input" id="em-time-custom" placeholder="如：农历正月十五（输入文字描述）">
-          </div>
-          <div id="em-panel-custom" class="admin-time-panel" style="display:none;">
-            <input class="cms-input" id="em-time-custom2" placeholder="自定义开集规律描述">
+          <div id="em-panel-specific_dates" class="admin-time-panel" style="display:none;">
+            <div id="em-specific-list"></div>
+            <button type="button" class="btn btn-sm btn-ghost" onclick="addSpecificDateRow('em')">＋ 添加指定日期</button>
           </div>
 
           <div style="display:flex;gap:8px;align-items:center;margin-top:10px;">
@@ -10445,6 +10582,10 @@ async function editMarket(id) {
             <input type="time" class="cms-input" id="em-time-start" value="06:00" style="flex:1;">
             <span style="color:var(--gray);">至</span>
             <input type="time" class="cms-input" id="em-time-end" value="12:00" style="flex:1;">
+          </div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--paper-dark);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><span style="font-size:12px;font-weight:700;">停市 / 临时加场例外</span><button type="button" class="btn btn-sm btn-ghost" onclick="addOpenTimeExceptionRow('em')">＋ 添加例外</button></div>
+            <div id="em-exception-list"></div>
           </div>
         </div>
 
@@ -10507,7 +10648,9 @@ async function saveEditMarket(id, publish) {
   const addr = document.getElementById('em-addr')?.value.trim();
   if (!name) { showToast('请填写集市名称'); return; }
 
-  const timeData = adminCollectTimeData('em');
+  let timeData;
+  try { timeData = adminCollectTimeData('em'); }
+  catch (error) { showToast('❌ ' + error.message); return; }
   const statusVal = publish ? 'published' : (document.getElementById('em-status')?.value || 'published');
 
   const payload = {
@@ -10662,6 +10805,7 @@ function setRmFilter(type, btn) {
 async function renderRemindersPage() {
   const list = document.getElementById('reminders-list');
   if (!list) return;
+  renderReminderTasks();
   list.innerHTML = '<div style="padding:30px;text-align:center;color:var(--gray);">加载中...</div>';
   const url = '/admin/reminders' + (_rmFilter ? `?remind_type=${_rmFilter}` : '');
   const res = await API.get(url);
@@ -10684,14 +10828,14 @@ async function renderRemindersPage() {
       <th style="padding:10px 14px;text-align:left;">开集时间</th>
       <th style="padding:10px 14px;text-align:left;">用户</th>
       <th style="padding:10px 14px;text-align:left;">类型</th>
+      <th style="padding:10px 14px;text-align:left;">提醒时段</th>
       <th style="padding:10px 14px;text-align:left;">设置时间</th>
-      <th style="padding:10px 14px;text-align:left;">操作</th>
     </tr></thead>
     <tbody>
     ${items.map(r => `<tr style="border-bottom:1px solid var(--paper-dark);">
       <td style="padding:10px 14px;font-weight:600;">${r.market_name}</td>
       <td style="padding:10px 14px;color:var(--gray);font-size:12px;">${(r.region||'').split('·').slice(-2).join('·')}</td>
-      <td style="padding:10px 14px;font-size:12px;max-width:160px;">${r.open_time||'-'}</td>
+      <td style="padding:10px 14px;font-size:12px;max-width:180px;">${_fmtOpenTime(r.open_time)||'-'}</td>
       <td style="padding:10px 14px;">
         <div style="font-size:13px;">${r.nickname||'用户'+r.user_id}</div>
         <div style="font-size:11px;color:var(--gray);">${r.phone||''}</div>
@@ -10702,13 +10846,58 @@ async function renderRemindersPage() {
           ? '<span style="background:#f0fdf4;color:#15803d;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">🔁 长期</span>'
           : '<span style="background:#fff7ed;color:#c2410c;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600;">⏰ 一次</span>'}
       </td>
-      <td style="padding:10px 14px;color:var(--gray);font-size:12px;">${(r.created_at||'').slice(0,16)}</td>
-      <td style="padding:10px 14px;">
-        ${r.remind_type==='once' ? `<button class="btn btn-sm btn-success" onclick="markReminderSent(${r.id},this)">标记已发送</button>` : '<span style="font-size:12px;color:var(--gray);">长期</span>'}
+      <td style="padding:10px 14px;font-size:11px;line-height:1.8;">
+        ${r.remind_evening ? '<span style="background:#fff7ed;color:#c2410c;border-radius:9px;padding:2px 7px;white-space:nowrap;">前晚 20:00</span>' : ''}
+        ${r.remind_morning ? '<span style="background:#f0fdf4;color:#15803d;border-radius:9px;padding:2px 7px;white-space:nowrap;">当天 06:30</span>' : ''}
       </td>
+      <td style="padding:10px 14px;color:var(--gray);font-size:12px;">${(r.created_at||'').slice(0,16)}</td>
     </tr>`).join('')}
     </tbody>
   </table>`;
+}
+
+async function renderReminderTasks() {
+  const list = document.getElementById('reminder-tasks-list');
+  if (!list) return;
+  list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--gray);">加载中...</div>';
+  const res = await API.get('/admin/reminder-tasks?status=pending');
+  if (!res || res.code !== 200) {
+    list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--gray);">任务加载失败</div>';
+    return;
+  }
+  const items = res.data?.list || [];
+  const label = document.getElementById('rm-task-total');
+  if (label) label.textContent = `${items.length} 条待发送`;
+  if (!items.length) {
+    list.innerHTML = '<div style="padding:28px;text-align:center;color:var(--gray);">当前没有待发送任务</div>';
+    return;
+  }
+  list.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <thead><tr style="background:var(--paper);border-bottom:2px solid var(--paper-dark);">
+      <th style="padding:10px 14px;text-align:left;">计划时间</th><th style="padding:10px 14px;text-align:left;">集市/开集日</th>
+      <th style="padding:10px 14px;text-align:left;">接收用户</th><th style="padding:10px 14px;text-align:left;">操作</th>
+    </tr></thead><tbody>${items.map(task=>`<tr style="border-bottom:1px solid var(--paper-dark);">
+      <td style="padding:10px 14px;"><span style="font-weight:700;">${task.slot==='evening'?'前晚 20:00':'当天 06:30'}</span><div style="font-size:11px;color:var(--gray);">${(task.scheduled_at||'').replace('T',' ').slice(0,16)}</div></td>
+      <td style="padding:10px 14px;"><div style="font-weight:600;">${_esc(task.market_name)}</div><div style="font-size:11px;color:var(--gray);">${task.open_date} · ${_esc(task.region||'')}</div></td>
+      <td style="padding:10px 14px;"><div>${_esc(task.nickname||'用户'+task.user_id)}</div><div style="font-size:11px;color:var(--gray);">${_esc(task.phone||'')}</div></td>
+      <td style="padding:10px 14px;"><button class="btn btn-sm btn-success" onclick="markReminderTaskSent(${task.id},this)">标记已发送</button></td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+async function buildReminderTasksNow() {
+  const res = await API.post('/admin/reminders/build-tasks', { at: new Date().toISOString() });
+  if (!res || res.code !== 200) { showToast('生成失败：' + (res?.msg || '请重试')); return; }
+  const data = res.data || {};
+  if (!data.slot) showToast('当前不是任务生成时段（20:00 或 06:30）');
+  else showToast(`✅ 已生成 ${data.created||0} 条，重复 ${data.already_exists||0} 条`);
+  renderRemindersPage();
+}
+
+async function markReminderTaskSent(id, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = '处理中...'; }
+  const res = await API.post(`/admin/reminder-tasks/${id}/mark-sent`, {});
+  if (res?.code === 200) { showToast('✅ 任务已标记发送'); renderRemindersPage(); }
+  else { showToast('操作失败'); if (btn) { btn.disabled = false; btn.textContent = '标记已发送'; } }
 }
 
 async function markReminderSent(id, btn) {
