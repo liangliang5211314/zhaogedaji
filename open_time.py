@@ -13,6 +13,7 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
+from functools import lru_cache
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from lunar_python import Solar
@@ -406,6 +407,7 @@ def migrate_open_time(raw) -> MigrationResult:
     return MigrationResult(value, "migrated")
 
 
+@lru_cache(maxsize=4096)
 def _lunar_parts(day: date) -> tuple[int, int, int, bool]:
     lunar = Solar.fromYmd(day.year, day.month, day.day).getLunar()
     month = lunar.getMonth()

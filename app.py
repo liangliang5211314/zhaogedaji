@@ -6,6 +6,7 @@ import os, json, uuid, sqlite3, hashlib, hmac, random, time, re, logging, math
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, request, jsonify, send_from_directory
+from open_time import OpenTimeValidationError, compute_open_time
 
 # ── 配置 & 日志（优先于其他模块）────────────────────────────
 try:
@@ -1464,9 +1465,117 @@ def _haversine_m(lat1, lng1, lat2, lng2):
     return radius * 2 * math.atan2(math.sqrt(value), math.sqrt(1 - value))
 
 
+def _nearby_now():
+    return datetime.now()
+
+
+def _market_kind(item):
+    category = item.get('category') or ''
+    name = item.get('name') or ''
+    return {
+        'night': category == '夜市' or '夜市' in name,
+        'early': category == '早市' or '早市' in name,
+        'big': category in {'农村大集', '大集', '集市'} or '大集' in name,
+    }
+
+
+def _matches_primary_category(item, category):
+    if not category or category == '全部':
+        return True
+    kind = _market_kind(item)
+    if category == '大集':
+        return kind['big']
+    if category == '早市':
+        return kind['early']
+    if category == '夜市':
+        return kind['night']
+    if category == '庙会':
+        return item.get('category') == '庙会' or '庙会' in (item.get('name') or '')
+    return item.get('category') == category
+
+
+def _derive_market_schedule(item, now):
+    raw = item.get('open_time') or ''
+    try:
+        open_time = json.loads(raw)
+    except (TypeError, ValueError):
+        open_time = {'type': 'custom', 'custom': str(raw)}
+    item['openTime'] = open_time
+    try:
+        if not isinstance(open_time, dict) or open_time.get('version') != 2:
+            raise OpenTimeValidationError(['legacy open_time 待迁移'])
+        schedule = compute_open_time(open_time, now)
+    except (OpenTimeValidationError, TypeError, ValueError):
+        schedule = {
+            'is_open_now': False,
+            'is_open_today': False,
+            'next_open_date': None,
+            'status': 'needs_review',
+            'display_rule': open_time.get('source_text', '') if isinstance(open_time, dict) else '',
+        }
+
+    status = schedule['status']
+    kind = _market_kind(item)
+    if status == 'ended_today':
+        label = '今日已结束'
+    elif status == 'tomorrow':
+        label = '明天开集'
+    elif status == 'daily':
+        label = '每日营业'
+    elif status == 'today':
+        label = '今晚开市' if kind['night'] else '今天有集'
+    elif status == 'future' and schedule['next_open_date']:
+        next_day = datetime.fromisoformat(schedule['next_open_date'])
+        label = f'{next_day.month}月{next_day.day}日开集'
+    elif status == 'needs_review':
+        label = '集期待核实'
+    else:
+        label = '暂无近期集期'
+
+    item['schedule'] = schedule
+    item['is_open_now'] = schedule['is_open_now']
+    item['is_open_today'] = schedule['is_open_today']
+    item['next_open_date'] = schedule['next_open_date']
+    item['schedule_status'] = status
+    item['status_label'] = label
+    return item
+
+
+def _recommendation_key(item, now):
+    status = item['schedule_status']
+    kind = _market_kind(item)
+    if status == 'ended_today':
+        priority = 9
+    elif now.hour < 12:
+        if status in {'today', 'daily'} and (kind['big'] or kind['early']):
+            priority = 0
+        elif status in {'today', 'daily'}:
+            priority = 1
+        elif status == 'tomorrow':
+            priority = 2
+        elif status == 'future':
+            priority = 3
+        else:
+            priority = 8
+    else:
+        if status in {'today', 'daily'} and kind['night']:
+            priority = 0
+        elif status == 'tomorrow' and kind['big']:
+            priority = 1
+        elif status in {'today', 'daily'}:
+            priority = 2
+        elif status == 'tomorrow':
+            priority = 3
+        elif status == 'future':
+            priority = 4
+        else:
+            priority = 8
+    return priority, item['distance'], -(item.get('rating') or 0)
+
+
 @app.route('/api/markets/nearby', methods=['GET'])
 def nearby_markets():
-    """Return published, geocoded markets sorted by distance.
+    """Return distance-sorted markets and a time-aware recommendation list.
 
     ``radius`` is expressed in kilometres; each result ``distance`` is metres.
     """
@@ -1481,7 +1590,11 @@ def nearby_markets():
         return jsonify({'code': 400, 'msg': '坐标超出有效范围'}), 400
     if radius_km <= 0 or limit <= 0:
         return jsonify({'code': 400, 'msg': 'radius 和 limit 必须大于 0'}), 400
-    radius_m = min(radius_km, 1000) * 1000
+    sort_mode = request.args.get('sort', 'distance')
+    if sort_mode not in {'distance', 'recommended'}:
+        return jsonify({'code': 400, 'msg': 'sort 只支持 distance 或 recommended'}), 400
+    category = request.args.get('category') or request.args.get('cat')
+    radius_m = radius_km * 1000
     limit = min(limit, 200)
 
     conn = get_db()
@@ -1497,18 +1610,31 @@ def nearby_markets():
         if distance > radius_m:
             continue
         item = dict(row)
+        if not _matches_primary_category(item, category):
+            continue
         item['distance'] = int(round(distance))
         item['tags'] = _parse_tags(item.get('tags'))
-        try:
-            open_time = json.loads(item.get('open_time') or '{}')
-            item['openTime'] = open_time if isinstance(open_time, dict) else {'type': 'custom', 'custom': str(open_time)}
-        except (TypeError, ValueError):
-            item['openTime'] = {'type': 'custom', 'custom': item.get('open_time', '')}
         items.append(item)
     items.sort(key=lambda item: (item['distance'], -(item.get('rating') or 0)))
-    items = items[:limit]
-    return jsonify({'code': 200, 'data': {'list': items, 'total': len(items)},
-                    'markets': items, 'total': len(items)})
+    matched_total = len(items)
+    candidates = items[:max(200, limit * 4)]
+    now = _nearby_now()
+    candidates = [_derive_market_schedule(item, now) for item in candidates]
+    distance_items = candidates[:limit]
+    recommended_items = sorted(candidates, key=lambda item: _recommendation_key(item, now))[:limit]
+    selected = recommended_items if sort_mode == 'recommended' else distance_items
+    return jsonify({
+        'code': 200,
+        'data': {
+            'list': selected,
+            'recommended': recommended_items,
+            'total': len(selected),
+            'matched_total': matched_total,
+            'sort': sort_mode,
+        },
+        'markets': selected,
+        'total': len(selected),
+    })
 
 
 @app.route('/api/markets', methods=['POST'])
