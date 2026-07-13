@@ -27,9 +27,9 @@ except ImportError:
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('zhaojishi')
 
-app = Flask(__name__, static_folder='static', static_url_path='')
-
-STATIC_DIR = os.path.join(os.path.dirname(__file__), 'static')
+BASE_DIR = os.path.dirname(__file__)
+STATIC_DIR = os.path.join(BASE_DIR, 'static')
+app = Flask(__name__, static_folder=STATIC_DIR, static_url_path='/static')
 
 # 短信验证码持久化到 sms_codes 表（不再用内存缓存，防止进程重启丢失）
 
@@ -52,17 +52,17 @@ def _guess_category(name, fallback='农村大集'):
         (['早市', '早集', '早摊', '晨市'],                              '早市'),
         (['夜市', '夜集', '夜间市场', '夜摊', '夜间'],                    '夜市'),
         (['庙会', '庙市', '庙集'],                                       '庙会'),
+        (['集市', '大集', '赶集', '赶会', '逢集', '集会', '农村市场'],     '农村大集'),
         (['批发', '交易市场', '交易中心', '配送中心', '仓储',
           '农产品中心', '综合批发'],                                      '批发市场'),
-        (['农贸', '菜市场', '便民市场', '生鲜', '蔬菜市场',
-          '菜场', '果蔬', '蔬果', '粮油', '农副'],                        '农贸市场'),
+        (['集贸', '农贸', '菜市场', '便民市场', '生鲜', '蔬菜市场',
+          '菜场', '果蔬', '蔬果', '粮油', '农副', '综合市场'],             '农贸市场'),
         (['花鸟', '鸟市', '花卉', '花市', '鱼市', '水族', '植物'],        '花鸟市场'),
         (['宠物'],                                                        '宠物市场'),
         (['古玩', '古董', '文玩', '收藏', '古货', '古物', '字画', '玉器'], '古玩市场'),
         (['二手', '旧货', '跳蚤', '闲置', '废品'],                        '二手市集'),
         (['小吃街', '小吃城', '美食街', '夜宵', '烧烤街'],                 '小吃街'),
         (['美食', '小吃', '饮食', '餐饮', '食品', '美味'],                 '美食集市'),
-        (['大集', '赶集', '逢集', '集会', '集市', '农村市场'],             '农村大集'),
     ]
     for keywords, cat in rules:
         if any(k in name for k in keywords):
@@ -80,6 +80,7 @@ def init_db():
             address     TEXT,
             region      TEXT,
             open_time   TEXT,
+            scale       TEXT DEFAULT '',
             phone       TEXT,
             tags        TEXT,
             description TEXT,
@@ -300,14 +301,15 @@ def init_db():
         "ALTER TABLE categories ADD COLUMN is_market_type INTEGER DEFAULT 0",
         "ALTER TABLE markets ADD COLUMN review_count INTEGER DEFAULT 0",
         "ALTER TABLE markets ADD COLUMN rating REAL",
+        "ALTER TABLE markets ADD COLUMN scale TEXT DEFAULT ''",
     ]:
         try: conn.execute(col_sql)
         except: pass
 
     # 标记默认的"市场类"分类（菜市场/农贸/批发等进入市场区块，不在主列表）
-    _market_type_names = ['便民市场', '农贸市场', '批发市场', '菜市场', '农产品市场',
-                          '宠物市场', '花鸟市场', '古玩市场', '二手市集', '美食集市',
-                          '小吃街', '集市']
+    _market_type_names = ['农贸市场', '批发市场', '农产品市场',
+                          '宠物市场', '花鸟市场', '古玩市场',
+                          '二手市集', '美食集市', '小吃街', '集市']
     for _n in _market_type_names:
         try:
             conn.execute("UPDATE categories SET is_market_type=1 WHERE name=?", (_n,))
@@ -460,37 +462,52 @@ def login_required(f):
     return decorated
 
 
-def _region_initials(region: str) -> str:
-    """将 '河北省·保定市·唐县' 转为拼音首字母，如 'HBBDTX'"""
+def _strip_place_suffix(text: str) -> str:
+    return re.sub(r'(省|市|区|县|镇|乡|村|街道|社区|大集|庙会|集市|夜市)$', '', text or '')
+
+
+def _location_initials(region: str, name: str = '', address: str = '') -> str:
+    """将行政区划和地点转成稳定小写拼音首字母，如 hbbdaxlht。"""
     try:
         from pypinyin import lazy_pinyin, Style
-        suffix = '省市区县镇乡村街道'
         parts = [p for p in region.split('·') if p]
+        tail = address or ''
+        for part in parts:
+            tail = tail.replace(part, '')
+        tail = tail.strip()
+        if tail:
+            parts.append(tail)
+        elif name:
+            parts.append(name)
+
+        deduped = []
+        for part in parts:
+            clean = _strip_place_suffix(part.strip())
+            if clean and clean not in deduped:
+                deduped.append(clean)
+
         result = ''
-        for part in parts[:3]:
-            clean = part.rstrip(suffix)
-            if not clean:
-                clean = part
-            letters = lazy_pinyin(clean, style=Style.FIRST_LETTER)
-            result += ''.join(letters).upper()
-        return result or 'MK'
+        for part in deduped:
+            letters = lazy_pinyin(part, style=Style.FIRST_LETTER)
+            result += ''.join(letters)
+        return re.sub(r'[^a-z0-9]', '', result.lower()) or 'mk'
     except Exception:
         # pypinyin 未安装时降级用 uuid 前8位
         return ''
 
 
-def make_market_id(region: str, conn) -> str:
-    """根据地区生成形如 HBBDTX0001 的集市 ID"""
-    prefix = _region_initials(region)
+def make_market_id(region: str, conn, name: str = '', address: str = '') -> str:
+    """根据地区和地点生成形如 hbbdaxlht 的稳定集市 ID。"""
+    prefix = _location_initials(region, name=name, address=address)
     if not prefix:
         return str(uuid.uuid4())
-    # 查当前该前缀下最大序号
-    row = conn.execute(
-        "SELECT MAX(CAST(SUBSTR(id, ?) AS INTEGER)) FROM markets WHERE id LIKE ?",
-        (len(prefix) + 1, f'{prefix}%')
-    ).fetchone()
-    seq = (row[0] or 0) + 1
-    return f'{prefix}{seq:04d}'
+    existing = conn.execute("SELECT id FROM markets WHERE id=?", (prefix,)).fetchone()
+    if not existing:
+        return prefix
+    seq = 2
+    while conn.execute("SELECT id FROM markets WHERE id=?", (f'{prefix}{seq:02d}',)).fetchone():
+        seq += 1
+    return f'{prefix}{seq:02d}'
 
 
 def log_action(user_id, action, target='', detail=''):
@@ -862,6 +879,22 @@ def get_open_cities():
         else:
             cities.add(parts[0])
     return jsonify({'code': 200, 'data': sorted(cities)})
+
+
+@app.route('/api/regions/open-regions', methods=['GET'])
+def get_open_regions():
+    """返回所有有已发布数据的区域前缀，用于省/市/区县未开通提示。"""
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT DISTINCT region FROM markets WHERE status='published' AND region IS NOT NULL AND region != ''"
+    ).fetchall()
+    conn.close()
+    regions = set()
+    for (region,) in rows:
+        parts = [p.strip() for p in region.split('·') if p.strip()]
+        for i in range(1, len(parts) + 1):
+            regions.add('·'.join(parts[:i]))
+    return jsonify({'code': 200, 'data': sorted(regions)})
 
 
 @app.route('/api/admin/region-map-stats', methods=['GET'])
@@ -1435,17 +1468,22 @@ def create_market():
     icon = icon_map.get(cat, '🏮')
 
     conn = get_db()
-    market_id = make_market_id(data.get('region', ''), conn)
+    market_id = make_market_id(
+        data.get('region', ''),
+        conn,
+        name=name,
+        address=data.get('address', ''),
+    )
     conn.execute(
         """INSERT INTO markets
-               (id,name,category,address,region,open_time,phone,tags,description,
+               (id,name,category,address,region,open_time,scale,phone,tags,description,
                 lat,lng,icon,bg,source,status,created_by)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'linear-gradient(135deg,#1A3A7A,#2B5BA8)',
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'linear-gradient(135deg,#1A3A7A,#2B5BA8)',
                    'user','pending',?)
         """,
         (market_id, name, cat,
          data.get('address',''), data.get('region',''),
-         data.get('open_time',''), data.get('phone',''),
+         data.get('open_time',''), data.get('scale',''), data.get('phone',''),
          json.dumps(data.get('tags') or []),
          data.get('description',''),
          data.get('lat'), data.get('lng'),
@@ -2924,6 +2962,14 @@ def admin_update_category(cid):
 def admin_sync_categories():
     """扫描 markets 表中实际用到的分类，把缺失的自动补入 categories 表"""
     conn = get_db()
+    icon_map = {
+        '早市': '🌅', '夜市': '🌙', '农村大集': '🏮', '庙会': '🎪',
+        '农贸市场': '🌾', '批发市场': '📦',
+        '宠物市场': '🐾', '古玩市场': '🏺', '花鸟市场': '🌸',
+        '二手市集': '♻️', '美食集市': '🍜', '小吃街': '🍜',
+    }
+    market_types = {'农贸市场', '批发市场',
+                    '宠物市场', '古玩市场', '花鸟市场', '二手市集', '美食集市', '小吃街'}
     # 获取 markets 表中所有不重复的分类
     used = {r[0] for r in conn.execute(
         "SELECT DISTINCT category FROM markets WHERE category IS NOT NULL AND category != ''"
@@ -2934,8 +2980,9 @@ def admin_sync_categories():
     for name in used:
         if name not in existing:
             conn.execute(
-                "INSERT OR IGNORE INTO categories(name, icon, sort_order, active) VALUES (?,?,99,1)",
-                (name, '🏮')
+                "INSERT OR IGNORE INTO categories(name, icon, sort_order, active, is_market_type, default_schedule) VALUES (?,?,?,?,?,?)",
+                (name, icon_map.get(name, '🏮'), 99, 1, 1 if name in market_types else 0,
+                 'daily' if name in market_types or name in {'早市', '夜市'} else 'lunar')
             )
             added.append(name)
     conn.commit()
@@ -3131,11 +3178,16 @@ def admin_approve(item_id):
     icon_map  = {'早市':'🌅','集市':'🏮','夜市':'🌙','农贸市场':'🌾',
                  '宠物市场':'🐾','古玩市场':'🏺','花鸟市场':'🌸',
                  '二手集市':'♻️','美食集市':'🍜','跳蚤市场':'🎪'}
-    market_id = make_market_id(overrides.get('region', item['region']), conn)
+    market_id = make_market_id(
+        overrides.get('region', item['region']),
+        conn,
+        name=overrides.get('name') or item['market_name'],
+        address=overrides.get('address') or item['address'],
+    )
     conn.execute("""
-        INSERT INTO markets(id,name,category,address,region,open_time,
+        INSERT INTO markets(id,name,category,address,region,open_time,scale,
         phone,tags,description,rating,fav_count,source,status,icon,lat,lng)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'published',?,?,?)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,'published',?,?,?)
     """, (
         market_id,
         overrides.get('name',    item['market_name']) or item['raw_title'][:30],
@@ -3143,6 +3195,7 @@ def admin_approve(item_id):
         overrides.get('address', item['address']),
         overrides.get('region',  item['region']),
         overrides.get('open_time', item['open_time']),
+        overrides.get('scale', item.get('scale', '')) if isinstance(item, dict) else overrides.get('scale', ''),
         overrides.get('phone',   item['phone']),
         item['tags'],
         overrides.get('description', item['description']),
@@ -3370,16 +3423,22 @@ def admin_add_market():
                  '宠物市场':'🐾','古玩市场':'🏺','花鸟市场':'🌸',
                  '二手集市':'♻️','美食集市':'🍜','跳蚤市场':'🎪'}
     conn = get_db()
-    market_id = make_market_id(data.get('region', ''), conn)
+    market_id = make_market_id(
+        data.get('region', ''),
+        conn,
+        name=data.get('name', ''),
+        address=data.get('address', ''),
+    )
     conn.execute("""
-        INSERT INTO markets(id,name,category,address,region,open_time,
+        INSERT INTO markets(id,name,category,address,region,open_time,scale,
         phone,tags,description,rating,lat,lng,source,status,icon,bg)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'manual','published',?,?)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,'manual','published',?,?)
     """, (
         market_id, data['name'], cat,
         data.get('address',''), data.get('region',''),
         json.dumps(data.get('openTime', data.get('open_time', {})),
                    ensure_ascii=False),
+        data.get('scale',''),
         data.get('phone',''),
         json.dumps(data.get('tags',[]), ensure_ascii=False),
         data.get('description', data.get('desc','')),
@@ -3417,7 +3476,7 @@ def admin_update_market(market_id):
     fields = {k: v for k, v in data.items()
               if k in ('name','category','address','region','open_time',
                        'phone','description','rating','status','lat','lng',
-                       'icon','bg','tags')}
+                       'icon','bg','tags','scale')}
     if 'tags' in fields and isinstance(fields['tags'], (list, dict)):
         fields['tags'] = json.dumps(fields['tags'], ensure_ascii=False)
     if 'openTime' in data:
@@ -3871,22 +3930,20 @@ def health():
 
 @app.route('/')
 def index():
-    return send_from_directory(STATIC_DIR, 'index.html')
+    return send_from_directory(BASE_DIR, 'index.html')
 
 @app.route('/app')
 def app_redirect():
     from flask import redirect
-    return redirect('/app/index.html')
+    return redirect('/')
 
 @app.route('/<path:path>')
 def static_files(path):
-    try:
-        return send_from_directory(STATIC_DIR, path)
-    except Exception:
-        # app/ 路径下的 404 回退到新版首页，其余回退到旧版
-        if path.startswith('app/'):
-            return send_from_directory(os.path.join(STATIC_DIR, 'app'), 'index.html')
-        return send_from_directory(STATIC_DIR, 'index.html')
+    root_files = {'index.html', 'admin.html', 'manifest.json', '404.html'}
+    if path in root_files:
+        return send_from_directory(BASE_DIR, path)
+    # 前端分享/深链路径兜底到首页，API 和 /static/* 由各自路由处理。
+    return send_from_directory(BASE_DIR, 'index.html')
 
 
 # ════════════════════════════════════════════════════════════
@@ -4222,6 +4279,27 @@ def amap_key_check():
     }})
 
 
+@app.route('/api/admin/amap-key', methods=['GET', 'POST'])
+@admin_required
+def amap_key_setting():
+    if request.method == 'GET':
+        conn = get_db()
+        row = conn.execute("SELECT value FROM app_settings WHERE key='amap_ws_key'").fetchone()
+        conn.close()
+        value = row['value'] if row else ''
+        return jsonify({'code': 200, 'data': {'saved': bool(value), 'key_tail': value[-6:] if value else ''}})
+
+    data = request.get_json(force=True) or {}
+    key = (data.get('key') or '').strip()
+    if not key:
+        return jsonify({'code': 400, 'msg': '请填写Key'}), 400
+    conn = get_db()
+    conn.execute("INSERT OR REPLACE INTO app_settings(key,value) VALUES('amap_ws_key',?)", (key,))
+    conn.commit()
+    conn.close()
+    return jsonify({'code': 200, 'msg': '已保存'})
+
+
 @app.route('/api/admin/amap-poi/import', methods=['POST'])
 @admin_required
 def amap_poi_import():
@@ -4298,7 +4376,9 @@ def amap_poi_queue():
 def not_found(e):
     if request.path.startswith('/api/'):
         return jsonify({'code': 404, 'message': '接口不存在'}), 404
-    return send_from_directory('.', 'index.html'), 404
+    if request.path.startswith('/static/'):
+        return jsonify({'code': 404, 'message': '静态资源不存在'}), 404
+    return send_from_directory(BASE_DIR, 'index.html')
 
 @app.errorhandler(500)
 def server_error(e):

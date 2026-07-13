@@ -38,8 +38,6 @@
 
 <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/icon-16.png?v=2">
 
-<link href="https://fonts.loli.net/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
-
 <style>
 
 :root {
@@ -4618,6 +4616,16 @@ function showScreen(id) {
 
 }
 
+function requireLoginScreen(msg = '请先登录') {
+
+  showToast(msg);
+
+  showScreen('login-screen');
+
+  return false;
+
+}
+
 
 
 // ── 新手引导 ─────────────────────────────────────────────────
@@ -5260,6 +5268,8 @@ function refreshMyPage() {
 
   const revCount  = (u.reviewList||[]).length;
 
+  let pubCount = (u.publishList||[]).length;
+
   const setPub = document.getElementById('my-stat-publish');
 
   const setFav = document.getElementById('my-stat-fav');
@@ -5272,7 +5282,12 @@ function refreshMyPage() {
     const tok = localStorage.getItem('zjsToken') || '';
     fetch('/api/my/markets', { headers: { 'Authorization': `Bearer ${tok}` } })
       .then(r => r.json())
-      .then(j => { if (setPub) setPub.textContent = j.code===200 ? (j.data||[]).length : 0; })
+      .then(j => {
+        pubCount = j.code===200 ? (j.data||[]).length : pubCount;
+        if (setPub) setPub.textContent = pubCount;
+        const bp2 = document.getElementById('badge-publish');
+        if (bp2) { bp2.textContent = pubCount; bp2.style.display = pubCount > 0 ? '' : 'none'; }
+      })
       .catch(() => { if (setPub) setPub.textContent = (u.publishList||[]).length; });
   }
 
@@ -5860,7 +5875,7 @@ function toggleFavBtn() {
 
 function openFavPage() {
 
-  if (!currentUser) { showToast('请先登录'); return; }
+  if (!currentUser) { requireLoginScreen('请先登录后查看收藏'); return; }
 
   openSubPage('fav');
 
@@ -6288,26 +6303,6 @@ function initPage() {
 
   if (currentUser) {
 
-    const token = localStorage.getItem('zjsToken') || '';
-
-    if (!token) {
-
-      // 有本地会话但没有服务器 token（可能是服务器重启期间登录的）
-
-      // 清除会话，要求重新登录以同步数据到服务器
-
-      currentUser = null;
-
-      localStorage.removeItem('zjsCurrentUser');
-
-      showScreen('login-screen');
-
-      showToast('请重新登录以同步您的数据');
-
-      return;
-
-    }
-
     showScreen('user-screen');
 
     renderMarkets && renderMarkets();
@@ -6320,7 +6315,13 @@ function initPage() {
 
   } else {
 
-    showScreen('login-screen');
+    showScreen('user-screen');
+
+    renderMarkets && renderMarkets();
+
+    const adminCard = document.getElementById('admin-entry-card');
+
+    if (adminCard) adminCard.style.display = 'none';
 
   }
 
@@ -6329,8 +6330,8 @@ function initPage() {
 // script在</body>前，所有DOM已就绪，直接初始化
 try { initPage(); } catch(e) {
   console.error('initPage error:', e);
-  // initPage崩溃时仍显示登录页，不卡在splash
-  try { document.getElementById('login-screen').classList.add('active'); } catch(e2){}
+  // initPage崩溃时仍显示首页，避免用户卡在登录页
+  try { showScreen('user-screen'); } catch(e2){}
   try { if(window._hideSplash) window._hideSplash(); } catch(e2){}
 }
 
@@ -6576,7 +6577,7 @@ let _API_CATS = [];
 
 // 市场类分类（进入市场区块，不在主列表）- 动态更新
 
-let MARKET_CATS_SET = new Set(['便民市场', '农贸市场', '批发市场', '菜市场', '集市']);
+let MARKET_CATS_SET = new Set(['农贸市场', '批发市场']);
 
 
 
@@ -6592,7 +6593,7 @@ function _updateCategoryList(cats) {
 
   // 始终包含内置的几个
 
-  ['便民市场', '农贸市场', '批发市场', '菜市场', '集市'].forEach(n => MARKET_CATS_SET.add(n));
+  ['农贸市场', '批发市场'].forEach(n => MARKET_CATS_SET.add(n));
 
 
 
@@ -6678,7 +6679,7 @@ function _updateCategoryList(cats) {
 
         MARKET_CATS_SET = new Set(ac.filter(c => c.is_market_type).map(c => c.name));
 
-        ['便民市场', '农贸市场', '批发市场', '菜市场', '集市'].forEach(n => MARKET_CATS_SET.add(n));
+        ['农贸市场', '批发市场'].forEach(n => MARKET_CATS_SET.add(n));
 
       }
 
@@ -6692,13 +6693,24 @@ function _updateCategoryList(cats) {
 
   try {
 
-    const res = await fetch('/api/markets?per_page=500');
+    let renderedFirstPage = false;
 
-    const data = await res.json();
+    const list = await fetchAllMarketsFromApi({}, {
+      perPage: 200,
+      onPage: (pageList, all, meta) => {
+        if (!pageList.length) return;
+        MARKETS = all.map(_mapApiMarket);
+        // 首屏先渲染，后续每几页合并刷新一次，避免手机长时间白屏。
+        if (!renderedFirstPage || meta.page % 4 === 0 || all.length >= meta.total) {
+          renderedFirstPage = true;
+          if (typeof renderMarkets === 'function') renderMarkets();
+        }
+      }
+    });
 
-    if (data.code === 200 && data.data) {
+    if (list.length) {
 
-      MARKETS = (data.data.list || []).map(_mapApiMarket);
+      MARKETS = list.map(_mapApiMarket);
 
       if (typeof renderMarkets === 'function') renderMarkets();
 
@@ -6732,9 +6744,7 @@ function _updateCategoryList(cats) {
 
       setTimeout(silentLocate, 500);
 
-      // ③ 等高德SDK就绪后，后台补全无坐标集市的经纬度
-
-      waitForAmap(() => { setTimeout(_geocodeAllMissing, 1000); });
+      // 坐标批量补全走后台脚本，首页不再自动解析全部缺坐标记录，避免手机首屏卡顿。
 
     }
 
@@ -6779,6 +6789,14 @@ function switchAdmin(p,el){
 // USER PAGE NAV
 
 function switchUserPage(p){
+
+  if (!currentUser && ['publish', 'fav', 'my'].includes(p)) {
+
+    requireLoginScreen('请先登录后使用该功能');
+
+    return;
+
+  }
 
   document.querySelectorAll('[id^="user-page-"]').forEach(x=>x.classList.add('hidden'));
 
@@ -6832,15 +6850,18 @@ function filterChip(el,name){
 
   document.querySelectorAll('.filter-chip:not(.region-chip)').forEach(c=>c.classList.remove('active'));
 
-  el.classList.add('active');
+  if (el) el.classList.add('active');
 
-  let list=getFiltered();
+  const isDateFilter = ['今日开集','明日开集','周末大集'].includes(name);
+  let list = isDateFilter
+    ? MARKETS.filter(m => selectedRegion==='全部地区'||(m.region||'').includes(selectedRegion))
+    : getFiltered();
 
-  if(name==='距离最近')list=[...list].sort((a,b)=>a.dist-b.dist);
+  if(name==='距离最近')list=sortMarketsByDistance(list);
 
   if(name==='好评优先')list=[...list].sort((a,b)=>b.rating-a.rating);
 
-  if(name==='今日开集')list=list.filter(m=>isOpenToday(m.openTime));
+  if(name==='今日开集')list=list.filter(m=>isOpenOnDate(m.openTime, new Date()));
 
   if(name==='明日开集'){const tmr=new Date();tmr.setDate(tmr.getDate()+1);list=list.filter(m=>isOpenOnDate(m.openTime,tmr));}
 
@@ -6849,6 +6870,7 @@ function filterChip(el,name){
   if(name==='周末限定'){const d=new Date().getDay();if(d===0||d===6)list=list.filter(m=>isOpenToday(m.openTime||m.time));else list=list.filter(m=>m.schedule==='weekend');}
 
   renderMarketList(list);
+  updateOpenDateTitle(name, list.length);
 
   if(name!=='全部')showToast('已筛选：'+name);
 
@@ -6902,19 +6924,35 @@ function _filterTodayOpen(){
 // ── 更新今日有集横幅 ──────────────────────────────
 function updateTodayBanner(){
   try{
-    const lunarMonths=['\u6b63','\u4e8c','\u4e09','\u56db','\u4e94','\u516d','\u4e03','\u516b','\u4e5d','\u5341','\u5341\u4e00','\u814a'];
-    const lunarDays=['\u521d\u4e00','\u521d\u4e8c','\u521d\u4e09','\u521d\u56db','\u521d\u4e94','\u521d\u516d','\u521d\u4e03','\u521d\u516b','\u521d\u4e5d','\u521d\u5341','\u5341\u4e00','\u5341\u4e8c','\u5341\u4e09','\u5341\u56db','\u5341\u4e94','\u5341\u516d','\u5341\u4e03','\u5341\u516b','\u5341\u4e5d','\u4e8c\u5341','\u5eff\u4e00','\u5eff\u4e8c','\u5eff\u4e09','\u5eff\u56db','\u5eff\u4e94','\u5eff\u516d','\u5eff\u4e03','\u5eff\u516b','\u5eff\u4e5d','\u4e09\u5341'];
-    const lunarBase=new Date(2025,0,29);
-    const diff=Math.floor((new Date()-lunarBase)/86400000);
-    const ld=((diff%30)+30)%30;
-    const lm=Math.floor((((diff%354)+354)%354)/29.5);
-    const ldStr='\u519c\u5386'+lunarMonths[Math.min(lm,11)]+'\u6708'+lunarDays[ld];
+    const today = new Date();
+    const ldStr = formatSolarLunarDate(today, '今日');
     const el=document.getElementById('today-lunar-str');
     if(el)el.textContent=ldStr;
-    const count=(window.MARKETS||[]).filter(m=>nextOpenLabel(m.openTime||m.time)===null).length;
+    const count=(MARKETS||[]).filter(m=>isOpenOnDate(m.openTime||m.time, today)).length;
     const countEl=document.getElementById('today-open-count');
     if(countEl)countEl.textContent=count||'0';
   }catch(e){}
+}
+
+function updateOpenDateTitle(filter, count){
+  const el = document.getElementById('section-title');
+  if (!el) return;
+  if (filter === '今日开集') {
+    el.textContent = `今日开集 ${count}个 · ${formatSolarLunarDate(new Date())}`;
+    return;
+  }
+  if (filter === '明日开集') {
+    const d = new Date(); d.setDate(d.getDate()+1);
+    el.textContent = `明日开集 ${count}个 · ${formatSolarLunarDate(d)}`;
+    return;
+  }
+  if (filter === '周末大集') {
+    el.textContent = `周末开集 ${count}个`;
+    return;
+  }
+  if (filter === '全部') {
+    el.textContent = selectedCat === '全部' ? '今日推荐' : selectedCat;
+  }
 }
 
 function renderMarketList(list){
@@ -8039,6 +8077,7 @@ function doLocate() {
 // ── 已开放城市列表（自动从后端加载，null=尚未加载）───────────
 
 let _openCities = null;
+let _openRegions = null;
 
 
 
@@ -8046,13 +8085,26 @@ async function _loadOpenCities() {
 
   try {
 
-    const res = await fetch('/api/regions/open-cities');
+    const [cityRes, regionRes] = await Promise.all([
+      fetch('/api/regions/open-cities'),
+      fetch('/api/regions/open-regions')
+    ]);
 
-    const json = await res.json();
+    const json = await cityRes.json();
 
     if (json.code === 200) _openCities = new Set(json.data);
+    const regionJson = await regionRes.json();
+    if (regionJson.code === 200) _openRegions = new Set(regionJson.data);
 
-  } catch(e) { _openCities = null; }
+  } catch(e) { _openCities = null; _openRegions = null; }
+
+}
+
+
+
+function _normalizeRegionStr(regionStr) {
+
+  return String(regionStr || '').split('·').map(s => s.trim()).filter(Boolean).join('·');
 
 }
 
@@ -8080,23 +8132,37 @@ function _isCityOpen(cityName) {
 
 
 
-function _checkCityOpen(addrLabel) {
+function _isRegionOpen(regionStr) {
 
-  if (!addrLabel) return;
+  const prefix = _normalizeRegionStr(regionStr);
 
-  // 从地址字符串中提取"XX市"
+  if (!prefix) return true;
 
-  const m = addrLabel.match(/([^\s·省]+[市])/);
+  if (!_openRegions || _openRegions.size === 0) return true; // 未加载完成放行
 
-  const city = m ? m[1] : null;
+  if (_openRegions.has(prefix)) return true;
+
+  for (const r of _openRegions) {
+
+    if (r.startsWith(prefix + '·')) return true;
+
+  }
+
+  return false;
+
+}
+
+
+
+function _setNotOpenBanner(name, visible) {
 
   const banner = document.getElementById('city-not-open-banner');
 
   if (!banner) return;
 
-  if (city && !_isCityOpen(city)) {
+  if (visible) {
 
-    document.getElementById('city-not-open-name').textContent = city;
+    document.getElementById('city-not-open-name').textContent = name || '该地区';
 
     banner.style.display = '';
 
@@ -8110,17 +8176,43 @@ function _checkCityOpen(addrLabel) {
 
 
 
+function _checkCityOpen(addrLabel) {
+
+  if (!addrLabel) return;
+
+  // 从地址字符串中提取"XX市"
+
+  const m = addrLabel.match(/([^\s·省]+[市])/);
+
+  const city = m ? m[1] : null;
+
+  if (city && !_isCityOpen(city)) {
+
+    _setNotOpenBanner(city, true);
+
+  } else {
+
+    _setNotOpenBanner('', false);
+
+  }
+
+}
+
+
+
 // ── 定位完成回调 ────────────────────────────────────────────
 
 function onLocated(lat, lng, real, addrLabel) {
 
   isLocating = false;
 
-  hasLocation = true;
+  const located = !!(real && isValidPosition(lat, lng));
 
-  userLat = lat;
+  hasLocation = located;
 
-  userLng = lng;
+  userLat = located ? Number(lat) : null;
+
+  userLng = located ? Number(lng) : null;
 
 
 
@@ -8132,7 +8224,7 @@ function onLocated(lat, lng, real, addrLabel) {
 
   if (icon) icon.textContent = '📍';
 
-  if (text) text.textContent = '已定位';
+  if (text) text.textContent = located ? '已定位' : '定位失败';
 
   if (btn)  btn.classList.remove('loading');
 
@@ -8147,23 +8239,23 @@ function onLocated(lat, lng, real, addrLabel) {
     const last = parts.filter(p=>p.trim()).pop() || full;
     return last.length > 10 ? last.slice(-10) : last;
   }
-  if (nameEl) nameEl.textContent = real ? _shortAddr(addrLabel) : '全部地区';
+  if (nameEl) nameEl.textContent = located ? _shortAddr(addrLabel) : '全部地区';
 
   const descEl = document.getElementById('nearby-loc-desc');
 
-  if (descEl) descEl.textContent = real ? `📍 ${addrLabel || '当前位置'}` : '开启位置权限后可查看真实距离';
+  if (descEl) descEl.textContent = located ? `📍 ${addrLabel || '当前位置'}` : '开启位置权限后可查看真实距离';
 
 
 
   // 缓存坐标到 localStorage（30分钟内下次打开直接复用，不等授权）
 
-  if (real && lat && lng) {
+  if (located) {
 
     try {
 
-      localStorage.setItem('_locLat', lat);
+      localStorage.setItem('_locLat', userLat);
 
-      localStorage.setItem('_locLng', lng);
+      localStorage.setItem('_locLng', userLng);
 
       localStorage.setItem('_locAt',  Date.now());
 
@@ -8177,19 +8269,19 @@ function onLocated(lat, lng, real, addrLabel) {
 
   // 城市开放检查（有真实定位且已加载城市列表时）
 
-  if (real && addrLabel) _checkCityOpen(addrLabel);
+  if (located && addrLabel) _checkCityOpen(addrLabel);
 
 
 
   // 计算真实距离并写回全局 MARKETS（仅集市有坐标时才计算）
 
-  if (real && lat && lng) {
+  if (located) {
 
     MARKETS = MARKETS.map(m => {
 
-      if (!m.lat || !m.lng) return { ...m, dist: null };
+      if (!hasMarketCoord(m)) return { ...m, dist: null };
 
-      const realDist = calcDistance(lat, lng, m.lat, m.lng);
+      const realDist = calcDistance(userLat, userLng, Number(m.lat), Number(m.lng));
 
       return { ...m, dist: realDist };
 
@@ -8205,13 +8297,13 @@ function onLocated(lat, lng, real, addrLabel) {
 
     .filter(m => !MARKET_CATS_SET.has(m.cat) || showMarketSection)
 
-    .sort((a, b) => (a.dist ?? Infinity) - (b.dist ?? Infinity));
+    .sort((a, b) => distSortValue(a) - distSortValue(b));
 
 
 
   const cntEl2 = document.getElementById('loc-mkt-count');
 
-  if (cntEl2 && real) { const near50 = sorted.filter(m => m.dist != null && m.dist <= 50).length; cntEl2.textContent = `50km内 ${near50} 个集市`; }
+  if (cntEl2 && located) { const near50 = sorted.filter(m => m.dist != null && m.dist <= 50).length; cntEl2.textContent = `50km内 ${near50} 个集市`; }
 
   const bannerEl = document.getElementById('nearby-banner-sub');
 
@@ -8245,7 +8337,7 @@ function onLocated(lat, lng, real, addrLabel) {
 
   // 如果地图视图是打开的，刷新地图
 
-  if (nearbyViewMode === 'map') renderNearbyMap(sorted, lat, lng);
+  if (nearbyViewMode === 'map') renderNearbyMap(sorted, userLat, userLng);
 
 
 
@@ -8279,7 +8371,7 @@ function onLocated(lat, lng, real, addrLabel) {
 
           distValEl.textContent = updated.dist + ' km';
 
-        } else if (!updated.lat || !updated.lng) {
+        } else if (!hasMarketCoord(updated)) {
 
           distValEl.textContent = '暂无坐标数据';
 
@@ -8317,6 +8409,36 @@ function calcDistance(lat1, lng1, lat2, lng2) {
 
 }
 
+function isValidPosition(lat, lng) {
+
+  const nLat = Number(lat);
+
+  const nLng = Number(lng);
+
+  return Number.isFinite(nLat) && Number.isFinite(nLng) && nLat !== 0 && nLng !== 0;
+
+}
+
+function hasMarketCoord(m) {
+
+  return isValidPosition(m?.lat, m?.lng);
+
+}
+
+function distSortValue(m) {
+
+  const dist = Number(m?.dist);
+
+  return Number.isFinite(dist) ? dist : Infinity;
+
+}
+
+function sortMarketsByDistance(list) {
+
+  return [...list].sort((a, b) => distSortValue(a) - distSortValue(b));
+
+}
+
 
 
 // ── 地理编码：地址 → 高德坐标（带缓存，支持多候选查询）────────
@@ -8325,9 +8447,241 @@ const _gcCache = {};
 
 
 
+async function fetchMarketsPage(page = 1, perPage = 200, params = {}) {
+
+  const qsParams = { ...params };
+
+  delete qsParams.page;
+
+  delete qsParams.per_page;
+
+  const qs = new URLSearchParams({ per_page: perPage, page, ...qsParams });
+
+  const res = await fetch(`/api/markets?${qs.toString()}`);
+
+  const data = await res.json();
+
+  if (data.code !== 200 || !data.data) return { list: [], total: 0, page };
+
+  const list = data.data.list || data.markets || [];
+
+  return {
+    list,
+    total: data.data.total || data.total || list.length,
+    page: data.data.page || data.page || page,
+  };
+
+}
+
+
+
+async function fetchAllMarketsFromApi(params={}, options={}) {
+
+  const perPage = options.perPage || params.per_page || 200;
+
+  let page = 1;
+
+  let all = [];
+
+  let total = 0;
+
+  const maxPages = options.maxPages || 40;
+
+  do {
+
+    const pageData = await fetchMarketsPage(page, perPage, params);
+
+    const list = pageData.list || [];
+
+    total = pageData.total || list.length;
+
+    all = all.concat(list);
+
+    if (typeof options.onPage === 'function') {
+
+      await options.onPage(list, all.slice(), { page, total });
+
+    }
+
+    if (!list.length || all.length >= total) break;
+
+    page += 1;
+
+  } while (page <= maxPages);
+
+  return all;
+
+}
+
+
+
+function _normGeoText(text) {
+
+  return String(text || '')
+
+    .replace(/[（(][^）)]*[）)]/g, '')
+
+    .replace(/[^\u4e00-\u9fffA-Za-z0-9]/g, '');
+
+}
+
+
+
+function _stripMarketPlaceSuffix(text) {
+
+  let value = _normGeoText(text);
+
+  const suffixes = ['农村大集','农贸市场','批发市场','大集','集市','庙会','早市','夜市','赶会','赶集','小集','市场'];
+
+  let changed = true;
+
+  while (changed) {
+
+    changed = false;
+
+    for (const suffix of suffixes) {
+
+      if (value.endsWith(suffix)) {
+
+        value = value.slice(0, -suffix.length);
+
+        changed = true;
+
+      }
+
+    }
+
+  }
+
+  return value;
+
+}
+
+
+
+function _marketRegionParts(m) {
+
+  return (m.region || '').split('·').map(x => x.trim()).filter(Boolean);
+
+}
+
+
+
+function _marketRegionText(m) {
+
+  return _marketRegionParts(m).join('');
+
+}
+
+
+
+function _buildPlaceTokens(m) {
+
+  const parts = _marketRegionParts(m);
+
+  const region = _normGeoText(parts.join(''));
+
+  const county = _normGeoText(parts[parts.length - 1] || '');
+
+  const nameNorm = _normGeoText(m.name);
+
+  const addressNorm = _normGeoText(m.addr);
+
+  const rawTokens = [
+
+    _stripMarketPlaceSuffix(m.name),
+
+    addressNorm.replace(region, ''),
+
+    addressNorm.replace(nameNorm, ''),
+
+  ];
+
+  const tokens = [];
+
+  rawTokens.forEach(raw => {
+
+    let token = _stripMarketPlaceSuffix(raw);
+
+    if (region && token.startsWith(region)) token = token.slice(region.length);
+
+    for (const part of parts) {
+
+      const p = _normGeoText(part);
+
+      if (p && token.startsWith(p)) token = token.slice(p.length);
+
+    }
+
+    if (token.length >= 2 && token !== county && !tokens.includes(token)) tokens.push(token);
+
+  });
+
+  return tokens;
+
+}
+
+
+
+function _withVillageSuffix(token) {
+
+  if (!token || /(省|市|县|区|镇|乡|村|庄|街道|社区|新区|开发区)$/.test(token)) return token;
+
+  return token + '村';
+
+}
+
+
+
+function _geoCandidateMatchesMarket(m, geo) {
+
+  const loc = geo?.location;
+
+  const lat = +loc?.lat;
+
+  const lng = +loc?.lng;
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+
+  if (lat < 18 || lat > 54 || lng < 73 || lng > 135) return false;
+
+  const parts = _marketRegionParts(m).map(_normGeoText);
+
+  const expectedProvince = parts[0] || '';
+
+  const expectedCity = parts[1] || '';
+
+  const expectedCounty = parts[2] || '';
+
+  const ac = geo.addressComponent || {};
+
+  const province = _normGeoText(ac.province);
+
+  const city = _normGeoText(Array.isArray(ac.city) ? ac.city.join('') : ac.city);
+
+  const district = _normGeoText(ac.district);
+
+  const formatted = _normGeoText(geo.formattedAddress || geo.formatted_address || geo.name || '');
+
+  const allText = _normGeoText([formatted, province, city, district].join(''));
+
+  if (expectedProvince && province && province !== expectedProvince && !allText.includes(expectedProvince)) return false;
+
+  if (expectedCity && city && city !== expectedCity && !allText.includes(expectedCity)) return false;
+
+  if (expectedCounty && district && district !== expectedCounty && !allText.includes(expectedCounty)) return false;
+
+  const tokens = _buildPlaceTokens(m);
+
+  return !tokens.length || tokens.some(t => allText.includes(t));
+
+}
+
+
+
 // 单次查询（内部使用）
 
-function _geocodeOnce(query) {
+function _geocodeOnce(query, market = null) {
 
   return new Promise(resolve => {
 
@@ -8341,9 +8695,13 @@ function _geocodeOnce(query) {
 
       new AMap.Geocoder({ radius: 5000 }).getLocation(query, (status, result) => {
 
-        const geo = result?.geocodes?.[0]?.location;
+        const geos = result?.geocodes || [];
 
-        const val = geo ? { lat: +geo.lat, lng: +geo.lng } : null;
+        const geo = market ? geos.find(g => _geoCandidateMatchesMarket(market, g)) : geos[0];
+
+        const loc = geo?.location;
+
+        const val = loc ? { lat: +loc.lat, lng: +loc.lng } : null;
 
         _gcCache[query] = val;
 
@@ -8363,7 +8721,7 @@ function _geocodeOnce(query) {
 
 function _buildQueries(m) {
 
-  const parts  = (m.region || '').split('·').filter(Boolean);
+  const parts  = _marketRegionParts(m);
 
   const county = parts[parts.length - 1] || '';                    // "唐县" / "定州市"
 
@@ -8377,25 +8735,31 @@ function _buildQueries(m) {
 
 
 
-  return [
+  const regionText = _marketRegionText(m);
 
-    // 最精确：省市县 + 去重后地址
+  const tokens = _buildPlaceTokens(m);
 
-    parts.join('') + addrClean,
+  const out = [];
 
-    // 省略省份
+  tokens.forEach(token => {
 
-    city + county + addrClean,
+    out.push(regionText + token);
 
-    // 只用县 + 地址
+    const village = _withVillageSuffix(token);
 
-    county + addrClean,
+    if (village !== token) out.push(regionText + village);
 
-    // 直接用集市全名（最后兜底）
+    out.push(city + county + token);
 
-    m.name,
+    if (village !== token) out.push(city + county + village);
 
-  ].filter(Boolean);
+  });
+
+  out.push(parts.join('') + addrClean, city + county + addrClean, county + addrClean, m.name);
+
+  const seen = new Set();
+
+  return out.map(_normGeoText).filter(q => q && !seen.has(q) && seen.add(q));
 
 }
 
@@ -8419,7 +8783,7 @@ async function _geocodeAddr(queryOrMarket) {
 
   for (const q of queries) {
 
-    const coords = await _geocodeOnce(q);
+    const coords = await _geocodeOnce(q, typeof queryOrMarket === 'string' ? null : queryOrMarket);
 
     if (coords) return coords;
 
@@ -8501,7 +8865,7 @@ async function _geocodeOne(m) {
 
   // 只要有用户位置就计算距离（coords=null 时 dist 留 null）
 
-  if (coords && userLat && userLng) {
+  if (coords && isValidPosition(userLat, userLng)) {
 
     MARKETS[idx].dist = calcDistance(userLat, userLng, coords.lat, coords.lng);
 
@@ -8535,7 +8899,7 @@ function _refreshDistUI() {
 
 
 
-  if (!userLat || !userLng) return;
+  if (!isValidPosition(userLat, userLng)) return;
 
 
 
@@ -8545,7 +8909,7 @@ function _refreshDistUI() {
 
     .filter(m => !MARKET_CATS_SET.has(m.cat) || showMarketSection)
 
-    .sort((a, b) => (a.dist ?? Infinity) - (b.dist ?? Infinity));
+    .sort((a, b) => distSortValue(a) - distSortValue(b));
 
   renderNearbyList(sorted);
 
@@ -8575,7 +8939,7 @@ async function _geocodeAllMissing() {
 
   if (!window.AMap || _geocodingRunning) return;
 
-  const missing = MARKETS.filter(m => !m.lat || !m.lng);
+  const missing = MARKETS.filter(m => !hasMarketCoord(m));
 
   if (!missing.length) return;
 
@@ -8641,21 +9005,29 @@ function renderNearbyList(markets) {
 
   listEl.innerHTML = markets.map(m => {
 
-    const hasDist = m.dist !== null && m.dist !== undefined;
+    const dist = Number(m.dist);
 
-    const fill = hasDist ? Math.max(5, 100 - m.dist * 18) : 0;
+    const hasDist = Number.isFinite(dist);
 
-    const distColor = !hasDist ? 'var(--gray)' : m.dist < 1 ? 'var(--green)' : m.dist < 3 ? 'var(--blue)' : 'var(--gray)';
+    const fill = hasDist ? Math.max(5, 100 - dist * 18) : 0;
+
+    const distColor = !hasDist ? 'var(--gray)' : dist < 1 ? 'var(--green)' : dist < 3 ? 'var(--blue)' : 'var(--gray)';
+
+    const noDistText = hasLocation
+
+      ? (hasMarketCoord(m) ? '📍 暂无距离' : '📍 暂无坐标数据')
+
+      : '📍 开启定位查看距离';
 
     const distHtml = hasDist
 
-      ? `<span class="dist-num" style="color:${distColor};">📡 ${m.dist}km</span>
+      ? `<span class="dist-num" style="color:${distColor};">📡 ${dist}km</span>
 
          <div class="dist-bar"><div class="dist-fill" style="width:${fill}%;background:${distColor}"></div></div>
 
-         <span style="font-size:10px;color:var(--gray);">约${Math.round(m.dist*13)}分钟步行</span>`
+         <span style="font-size:10px;color:var(--gray);">约${Math.round(dist*13)}分钟步行</span>`
 
-      : `<span style="font-size:10px;color:var(--gray);">📍 开启定位查看距离</span>`;
+      : `<span style="font-size:10px;color:var(--gray);">${noDistText}</span>`;
 
     const lbl = nextOpenLabel(m.openTime || m.time);
 
@@ -8729,7 +9101,7 @@ function toggleNearbyView() {
 
     if (list) list.classList.add('hidden');
 
-    renderNearbyMap([...MARKETS].sort((a,b)=>a.dist-b.dist), userLat, userLng);
+    renderNearbyMap(sortMarketsByDistance(MARKETS), userLat, userLng);
 
   } else {
 
@@ -8819,7 +9191,7 @@ function renderNearbyMap(markets, lat, lng) {
 
   markets.forEach(m => {
 
-    if (!m.lat || !m.lng) return;
+    if (!hasMarketCoord(m)) return;
 
     const marker = new AMap.Marker({
 
@@ -8841,6 +9213,10 @@ function renderNearbyMap(markets, lat, lng) {
 
     marker.on('click', () => {
 
+      const distText = Number.isFinite(Number(m.dist)) ? `📍 ${Number(m.dist)}km` : '📍 暂无距离';
+
+      const detailId = JSON.stringify(m.id);
+
       infoWindow.setContent(
 
         `<div style="padding:10px 14px;min-width:180px;">
@@ -8849,9 +9225,9 @@ function renderNearbyMap(markets, lat, lng) {
 
           <div style="font-size:12px;color:#666;margin-bottom:4px;">⏰ ${m.time}</div>
 
-          <div style="font-size:12px;color:#666;margin-bottom:8px;">${m.rating?`⭐ ${m.rating} · `:``}📍 ${m.dist}km</div>
+          <div style="font-size:12px;color:#666;margin-bottom:8px;">${m.rating?`⭐ ${m.rating} · `:``}${distText}</div>
 
-          <button onclick="openMarketDetail(MARKETS.find(x=>x.id===${m.id}))"
+          <button onclick="openMarketDetail(MARKETS.find(x=>x.id===${detailId}))"
 
             style="width:100%;padding:6px;background:#E8703A;color:white;border:none;border-radius:6px;font-size:12px;cursor:pointer;">
 
@@ -8915,7 +9291,7 @@ function _applyNearbySort(list) {
 
   else if (_nearbySort === '最近开市') s.sort((a,b) => _daysToOpen(a) - _daysToOpen(b));
 
-  else s.sort((a,b) => (a.dist ?? Infinity) - (b.dist ?? Infinity));
+  else s.sort((a,b) => distSortValue(a) - distSortValue(b));
 
   return s;
 
@@ -8935,7 +9311,7 @@ function _applyNearbyFilter(list) {
 
       // 大集：匹配所有包含"大集"或"集市"类别
 
-      if (_nearbyCatFilter === '农村大集') return cat.includes('大集') || cat.includes('集市') || cat === '农贸市场';
+      if (_nearbyCatFilter === '农村大集') return cat.includes('大集');
 
       return cat === _nearbyCatFilter;
 
@@ -9047,51 +9423,117 @@ function openAmapNavigation() {
 
 
 
-// 通过集市ID导航（自动从MARKETS取坐标和地址，无坐标时先geocode）
+// 通过集市ID导航：点击后立即跳高德，避免异步 geocode 后被浏览器拦截弹窗。
 
-async function navigateToMarket(marketId) {
+function navigateToMarket(marketId) {
 
   const m = MARKETS.find(x => x.id === marketId) || currentMarket;
 
   if (!m) return;
 
-  if (m.lat && m.lng) {
+  const addr = _fullAddr(m) || m.addr || m.region || m.name || '';
 
-    startNavigation(m.addr, m.lat, m.lng);
-
-    return;
-
-  }
-
-  // 无坐标：先geocode，获取坐标后精确导航
-
-  showToast('坐标获取中...');
-
-  const coords = await _geocodeAddr(m);  // 传集市对象，自动构造最优查询
-
-  if (coords) {
-
-    // 写入缓存
-
-    const idx = MARKETS.findIndex(x => x.id === m.id);
-
-    if (idx >= 0) { MARKETS[idx].lat = coords.lat; MARKETS[idx].lng = coords.lng; }
-
-    if (currentMarket?.id === m.id) { currentMarket.lat = coords.lat; currentMarket.lng = coords.lng; }
-
-    startNavigation(m.addr, coords.lat, coords.lng);
-
-  } else {
-
-    startNavigation(m.addr, null, null);
-
-  }
+  startNavigation(addr, m.lat, m.lng, m.name);
 
 }
 
 
 
-function startNavigation(addr, destLat, destLng) {
+function _openAmapUrl(url) {
+
+  const opened = window.open(url, '_blank');
+
+  if (!opened) window.location.href = url;
+
+}
+
+
+
+function _buildAmapWebUrl(addr, destLat, destLng, name='') {
+
+  if (destLat && destLng) {
+
+    const destName = encodeURIComponent(name || addr || '目的地');
+
+    return `https://uri.amap.com/navigation?to=${destLng},${destLat},${destName}&mode=car&coordinate=gaode&callnative=1`;
+
+  }
+
+  return `https://uri.amap.com/navigation?to=${encodeURIComponent(addr)}&mode=car&callnative=1`;
+
+}
+
+
+
+function _buildAmapNativeUrl(addr, destLat, destLng, name='') {
+
+  const ua = navigator.userAgent || '';
+
+  const isIOS = /iPhone|iPad|iPod/i.test(ua);
+
+  const isAndroid = /Android/i.test(ua);
+
+  const dname = encodeURIComponent(name || addr || '目的地');
+
+  const appName = encodeURIComponent('找个大集');
+
+  if (isIOS) {
+
+    const pos = (destLat && destLng) ? `&dlat=${destLat}&dlon=${destLng}` : '';
+
+    return `iosamap://path?sourceApplication=${appName}&did=&dname=${dname}${pos}&dev=0&t=0`;
+
+  }
+
+  if (isAndroid) {
+
+    const pos = (destLat && destLng) ? `&dlat=${destLat}&dlon=${destLng}` : '';
+
+    return `androidamap://route/plan/?sourceApplication=${appName}&did=&dname=${dname}${pos}&dev=0&t=0`;
+
+  }
+
+  return '';
+
+}
+
+
+
+function _openAmapNavigation(addr, destLat, destLng, name='') {
+
+  const webUrl = _buildAmapWebUrl(addr, destLat, destLng, name);
+
+  const nativeUrl = _buildAmapNativeUrl(addr, destLat, destLng, name);
+
+  if (!nativeUrl) {
+
+    _openAmapUrl(webUrl);
+
+    return;
+
+  }
+
+  const startedAt = Date.now();
+
+  window.location.href = nativeUrl;
+
+  setTimeout(() => {
+
+    // App 未安装或 Scheme 被拦截时，再退回高德 Web URI。
+
+    if (document.visibilityState !== 'hidden' && Date.now() - startedAt < 2200) {
+
+      window.location.href = webUrl;
+
+    }
+
+  }, 1200);
+
+}
+
+
+
+function startNavigation(addr, destLat, destLng, name='') {
 
   // 判断是否在安卓APP内（有Android Bridge）
 
@@ -9103,7 +9545,7 @@ function startNavigation(addr, destLat, destLng) {
 
       destLng ? String(destLng) : '0',
 
-      addr
+      addr || name || ''
 
     );
 
@@ -9117,19 +9559,13 @@ function startNavigation(addr, destLat, destLng) {
 
   if (destLat && destLng) {
 
-    // 有坐标，精确导航（直接启动路线规划，不需要用户选择）
+    // 移动端直接唤起高德 App；桌面端打开高德网页版。
 
-    const url = `https://uri.amap.com/navigation?to=${destLng},${destLat},${encodeURIComponent(addr)}&mode=car&callnative=1`;
-
-    window.open(url, '_blank');
+    _openAmapNavigation(addr, destLat, destLng, name);
 
   } else if (addr) {
 
-    // 无坐标但有地址：直接导航到该地址，高德会自动解析（不走搜索页）
-
-    const url = `https://uri.amap.com/navigation?to=${encodeURIComponent(addr)}&mode=car&callnative=1`;
-
-    window.open(url, '_blank');
+    _openAmapNavigation(addr, null, null, name || addr);
 
   } else {
 
@@ -9145,31 +9581,9 @@ function startNavigation(addr, destLat, destLng) {
 
 function showRoutePlanner() {
 
-  if (!window.AMap || !currentMarket) {
+  openAmapNavigation();
 
-    showToast('路线规划功能加载中...');
-
-    return;
-
-  }
-
-  if (!userLat || !userLng) {
-
-    showToast('请先点击「附近集市」获取当前位置');
-
-    return;
-
-  }
-
-  if (!currentMarket.lat || !currentMarket.lng) {
-
-    // 只有地址，直接跳高德
-
-    startNavigation(currentMarket.addr, null, null);
-
-    return;
-
-  }
+  return;
 
 
 
@@ -9325,9 +9739,9 @@ const ADDR_DATA = {
 
     {name:'陕西省', abbr:'陕', cities:['西安市','宝鸡市','咸阳市','汉中市','渭南市','延安市','榆林市','铜川市','商洛市','安康市']},
 
-    {name:'河北省', abbr:'冀', cities:['石家庄市','唐山市','保定市','张家口市','沧州市','廊坊市','邢台市','秦皇岛市','邯郸市','衡水市']},
+    {name:'河北省', abbr:'冀', cities:['石家庄市','唐山市','秦皇岛市','邯郸市','邢台市','保定市','张家口市','承德市','沧州市','廊坊市','衡水市','雄安新区']},
 
-    {name:'辽宁省', abbr:'辽', cities:['沈阳市','大连市','鞍山市','抚顺市','本溪市','丹东市','锦州市','营口市','辽阳市','铁岭市']},
+    {name:'辽宁省', abbr:'辽', cities:['沈阳市','大连市','鞍山市','抚顺市','本溪市','丹东市','锦州市','营口市','阜新市','辽阳市','盘锦市','铁岭市','朝阳市','葫芦岛市']},
 
     {name:'福建省', abbr:'闽', cities:['福州市','厦门市','泉州市','莆田市','漳州市','三明市','南平市','龙岩市','宁德市']},
 
@@ -9339,9 +9753,9 @@ const ADDR_DATA = {
 
     {name:'贵州省', abbr:'贵', cities:['贵阳市','遵义市','六盘水市','安顺市','毕节市','铜仁市']},
 
-    {name:'黑龙江省', abbr:'黑', cities:['哈尔滨市','齐齐哈尔市','大庆市','佳木斯市','牡丹江市','绥化市','鸡西市','鹤岗市']},
+    {name:'黑龙江省', abbr:'黑', cities:['哈尔滨市','齐齐哈尔市','鸡西市','鹤岗市','双鸭山市','大庆市','伊春市','佳木斯市','七台河市','牡丹江市','黑河市','绥化市','大兴安岭地区']},
 
-    {name:'吉林省', abbr:'吉', cities:['长春市','吉林市','四平市','白山市','通化市','延边州','白城市','松原市']},
+    {name:'吉林省', abbr:'吉', cities:['长春市','吉林市','四平市','辽源市','通化市','白山市','松原市','白城市','延边朝鲜族自治州']},
 
     {name:'江西省', abbr:'赣', cities:['南昌市','九江市','上饶市','景德镇市','萍乡市','新余市','鹰潭市','赣州市','吉安市','宜春市']},
 
@@ -9349,7 +9763,7 @@ const ADDR_DATA = {
 
     {name:'广西壮族自治区', abbr:'桂', cities:['南宁市','桂林市','柳州市','北海市','梧州市','玉林市','百色市','贵港市']},
 
-    {name:'内蒙古自治区', abbr:'蒙', cities:['呼和浩特市','包头市','鄂尔多斯市','赤峰市','通辽市','巴彦淖尔市','乌海市','锡林郭勒盟']},
+    {name:'内蒙古自治区', abbr:'蒙', cities:['呼和浩特市','包头市','乌海市','赤峰市','通辽市','鄂尔多斯市','呼伦贝尔市','巴彦淖尔市','乌兰察布市','兴安盟','锡林郭勒盟','阿拉善盟']},
 
     {name:'新疆维吾尔自治区', abbr:'新', cities:['乌鲁木齐市','克拉玛依市','吐鲁番市','哈密市','喀什地区','伊犁州']},
 
@@ -9570,29 +9984,11 @@ function applyAndClose() {
 
     if (addrSelected.level >= 0) showToast('📍 已选：' + regionStr);
 
-    // 手动选城市时检查开放状态
+    // 手动选地区时检查开放状态
 
     if (addrState.city || addrState.province) {
 
-      const city = addrState.city || addrState.province;
-
-      const banner = document.getElementById('city-not-open-banner');
-
-      if (banner) {
-
-        if (!_isCityOpen(city)) {
-
-          document.getElementById('city-not-open-name').textContent = city;
-
-          banner.style.display = '';
-
-        } else {
-
-          banner.style.display = 'none';
-
-        }
-
-      }
+      _setNotOpenBanner(addrSelected.short, !_isRegionOpen(regionStr));
 
     }
 
@@ -10617,47 +11013,11 @@ function formatOpenTime(timeObj) {
 
 
 
-// ── 判断今天是否开集（用于"今日开集"标签）──────────────────────
-
-// 注意：农历判断需要农历库，这里用简化算法做近似
+// ── 判断指定日期是否开集（今日/明日/周末筛选共用）──────────────────────
 
 function isOpenToday(timeObj) {
 
-  if (!timeObj) return false;
-
-  if (typeof timeObj === 'string') {
-
-    timeObj = _parseOpenTime(timeObj);
-
-    if (!timeObj) return false;
-
-  }
-
-  const today = new Date();
-
-  if (timeObj.type === 'weekday') {
-
-    return (timeObj.days||[]).includes(today.getDay());
-
-  }
-
-  if (timeObj.type === 'monthly') {
-
-    return (timeObj.days||[]).includes(today.getDate());
-
-  }
-
-  if (timeObj.type === 'lunar') {
-
-    // 简化：用农历近似换算（实际部署时可引入lunar.js库）
-
-    const lunarDay = getLunarDay(today);
-
-    return (timeObj.days||[]).includes(lunarDay);
-
-  }
-
-  return false; // custom类型无法自动判断
+  return isOpenOnDate(timeObj, new Date());
 
 }
 
@@ -10673,11 +11033,17 @@ function isOpenOnDate(timeObj, date) {
 
   if (typeof timeObj === 'string') { timeObj = _parseOpenTime(timeObj); if (!timeObj) return false; }
 
+  if (timeObj.type === 'daily') return true;
+
   if (timeObj.type === 'weekday') return (timeObj.days||[]).includes(date.getDay());
 
-  if (timeObj.type === 'monthly') return (timeObj.days||[]).includes(date.getDate());
+  if (timeObj.type === 'monthly' || timeObj.type === 'solar') return (timeObj.days||[]).includes(date.getDate());
 
   if (timeObj.type === 'lunar') return (timeObj.days||[]).includes(getLunarDay(date));
+
+  if (timeObj.type === 'lunar_event') return isLunarFixedDateOpen(timeObj.month, timeObj.day, date, timeObj.duration || 1);
+
+  if (timeObj.type === 'festival') return isFestivalOpenOnDate(timeObj, date);
 
   return false;
 
@@ -10685,43 +11051,179 @@ function isOpenOnDate(timeObj, date) {
 
 
 
-// 简化农历日期获取（近似算法，正式上线建议引入lunar-javascript库）
+// 农历日期获取：优先使用浏览器 Intl 中国农历，旧环境回退到近年表
 
 function getLunarDay(date) {
 
-  // 精确农历数据：每个农历年的春节（正月初一）公历日期 + 各月天数
+  return getLunarInfo(date).day;
 
-  // 验证：2026-03-24 = 二月初六 ✓
+}
 
-  const LUNAR_YEARS = [
-
-    { ny: new Date(2024,1,10), m: [29,30,29,30,29,30,29,30,29,30,29,30] },        // 甲辰年 12月
-
-    { ny: new Date(2025,0,29), m: [30,29,30,29,29,29,30,29,30,29,30,30,30] },     // 乙巳年 13月(闰六月)
-
-    { ny: new Date(2026,1,17), m: [30,29,30,29,30,29,30,29,30,29,30,29] },        // 丙午年 12月
-
-    { ny: new Date(2027,1,6),  m: [30,30,29,30,29,30,29,30,29,30,29,30] },        // 丁未年 12月
-
-  ];
+function getLunarInfo(date) {
 
   const d = new Date(date); d.setHours(0,0,0,0);
 
-  let ly = LUNAR_YEARS[0];
+  const fromIntl = getLunarInfoByIntl(d);
 
-  for (const y of LUNAR_YEARS) { if (d >= y.ny) ly = y; else break; }
+  if (fromIntl) return fromIntl;
 
-  let days = Math.floor((d - ly.ny) / 86400000);
+  return getLunarInfoByTable(d);
 
-  for (const len of ly.m) {
+}
 
-    if (days < len) return days + 1;
+function lunarDayName(day) {
+  const names = ['', '初一','初二','初三','初四','初五','初六','初七','初八','初九','初十','十一','十二','十三','十四','十五','十六','十七','十八','十九','二十','廿一','廿二','廿三','廿四','廿五','廿六','廿七','廿八','廿九','三十'];
+  return names[day] || String(day || '');
+}
 
-    days -= len;
+function lunarMonthName(month) {
+  const names = ['', '正月','二月','三月','四月','五月','六月','七月','八月','九月','十月','冬月','腊月'];
+  return names[month] || `${month}月`;
+}
+
+function weekdayName(day) {
+  const names = ['周日','周一','周二','周三','周四','周五','周六'];
+  return names[day] || '';
+}
+
+function getLunarInfoByIntl(date) {
+
+  try {
+
+    if (!Intl || !Intl.DateTimeFormat) return null;
+
+    const parts = new Intl.DateTimeFormat('zh-CN-u-ca-chinese', {
+      year:'numeric', month:'long', day:'numeric'
+    }).formatToParts(date);
+
+    const monthText = parts.find(p=>p.type==='month')?.value || '';
+    const dayText = parts.find(p=>p.type==='day')?.value || '';
+    const month = parseLunarMonthText(monthText);
+    const day = parseInt(dayText, 10) || parseLunarDayText(dayText);
+
+    if (!month || !day) return null;
+
+    return { month, day, isLeap: monthText.includes('闰'), monthText, dayText: lunarDayName(day) || dayText };
+
+  } catch(e) {
+
+    return null;
 
   }
 
-  return days + 1;
+}
+
+function parseLunarMonthText(text) {
+
+  const clean = String(text || '').replace(/^闰/, '').replace(/月/g, '');
+
+  const map = {'正':1,'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10,'十一':11,'冬':11,'十二':12,'腊':12};
+
+  return map[clean] || parseInt(clean, 10) || 0;
+
+}
+
+function parseLunarDayText(text) {
+
+  const target = String(text || '').replace(/日/g, '');
+
+  for (let i = 1; i <= 30; i++) {
+    if (lunarDayName(i) === target) return i;
+  }
+
+  return parseInt(target, 10) || 0;
+
+}
+
+function getLunarInfoByTable(date) {
+
+  const LUNAR_YEARS = [
+
+    { ny: new Date(2024,1,10), m: [{n:1,d:29},{n:2,d:30},{n:3,d:29},{n:4,d:30},{n:5,d:29},{n:6,d:30},{n:7,d:29},{n:8,d:30},{n:9,d:29},{n:10,d:30},{n:11,d:29},{n:12,d:30}] },
+
+    { ny: new Date(2025,0,29), m: [{n:1,d:30},{n:2,d:29},{n:3,d:30},{n:4,d:29},{n:5,d:29},{n:6,d:29},{n:6,d:30,leap:true},{n:7,d:29},{n:8,d:30},{n:9,d:29},{n:10,d:30},{n:11,d:30},{n:12,d:30}] },
+
+    { ny: new Date(2026,1,17), m: [{n:1,d:30},{n:2,d:29},{n:3,d:30},{n:4,d:29},{n:5,d:30},{n:6,d:29},{n:7,d:30},{n:8,d:29},{n:9,d:30},{n:10,d:29},{n:11,d:30},{n:12,d:29}] },
+
+    { ny: new Date(2027,1,6),  m: [{n:1,d:30},{n:2,d:30},{n:3,d:29},{n:4,d:30},{n:5,d:29},{n:6,d:30},{n:7,d:29},{n:8,d:30},{n:9,d:29},{n:10,d:30},{n:11,d:29},{n:12,d:30}] },
+
+  ];
+
+  let ly = LUNAR_YEARS[0];
+
+  for (const y of LUNAR_YEARS) { if (date >= y.ny) ly = y; else break; }
+
+  let days = Math.floor((date - ly.ny) / 86400000);
+
+  for (const m of ly.m) {
+
+    if (days < m.d) {
+      return {
+        month: m.n,
+        day: days + 1,
+        isLeap: !!m.leap,
+        monthText: (m.leap ? '闰' : '') + lunarMonthName(m.n),
+        dayText: lunarDayName(days+1),
+      };
+    }
+
+    days -= m.d;
+
+  }
+
+  return { month:12, day:Math.max(1, days+1), isLeap:false, monthText:'腊月', dayText:lunarDayName(Math.max(1, days+1)) };
+
+}
+
+function isFestivalOpenOnDate(timeObj, date) {
+
+  const duration = Math.max(1, parseInt(timeObj.duration || 1, 10) || 1);
+
+  const dates = Array.isArray(timeObj.dates) ? timeObj.dates : [];
+
+  if (!dates.length) return false;
+
+  return dates.some(md => {
+    const [m, d] = String(md).split('-').map(n=>parseInt(n,10));
+    if (!m || !d) return false;
+    if (timeObj.calendar === 'solar') return isSolarFixedDateOpen(m, d, date, duration);
+    return isLunarFixedDateOpen(m, d, date, duration);
+  });
+
+}
+
+function isSolarFixedDateOpen(month, day, date, duration=1) {
+
+  for (let i = 0; i < duration; i++) {
+    const d = new Date(date); d.setDate(d.getDate() - i);
+    if (d.getMonth()+1 === month && d.getDate() === day) return true;
+  }
+
+  return false;
+
+}
+
+function isLunarFixedDateOpen(month, day, date, duration=1) {
+
+  for (let i = 0; i < duration; i++) {
+    const d = new Date(date); d.setDate(d.getDate() - i);
+    const li = getLunarInfo(d);
+    if (!li.isLeap && li.month === month && li.day === day) return true;
+  }
+
+  return false;
+
+}
+
+function formatSolarLunarDate(date, prefix='') {
+
+  const d = new Date(date);
+  const li = getLunarInfo(d);
+  const week = weekdayName(d.getDay());
+  const solar = `阳历${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${week}`;
+  const lunar = `农历${li.isLeap ? '闰' : ''}${lunarMonthName(li.month)}${lunarDayName(li.day)}`;
+
+  return [prefix, solar, lunar].filter(Boolean).join(' · ');
 
 }
 
@@ -10767,6 +11269,19 @@ function nextOpenLabel(timeObj) {
 
   }
 
+  if (timeObj.type === 'festival' || timeObj.type === 'lunar_event') {
+
+    if (isOpenOnDate(timeObj, today)) return null;
+
+    for (let i = 1; i <= 370; i++) {
+      const d = new Date(today); d.setDate(today.getDate() + i);
+      if (isOpenOnDate(timeObj, d)) return i === 1 ? '明日开集' : `${i}天后开集`;
+    }
+
+    return '';
+
+  }
+
 
 
   const days = (timeObj.days || []).slice().sort((a,b)=>a-b);
@@ -10775,7 +11290,7 @@ function nextOpenLabel(timeObj) {
 
   let cur;
 
-  if (timeObj.type === 'monthly') cur = today.getDate();
+  if (timeObj.type === 'monthly' || timeObj.type === 'solar') cur = today.getDate();
 
   else if (timeObj.type === 'weekday') cur = today.getDay();
 
@@ -10829,6 +11344,16 @@ function formatScheduleTag(timeObj) {
 
   }
 
+  if (timeObj.type === 'daily') {
+
+    const label = timeObj.text || timeObj.label || '每天开放';
+
+    const range = timeObj.start && timeObj.end ? `${timeObj.start}-${timeObj.end}` : '';
+
+    return range && !label.includes(range) ? `${label} ${range}` : label;
+
+  }
+
   if (timeObj.type === 'lunar') {
 
     if (timeObj.label) return `农历${timeObj.label}`;
@@ -10857,14 +11382,29 @@ function formatScheduleTag(timeObj) {
 
   }
 
-  if (timeObj.type === 'monthly') {
+  if (timeObj.type === 'monthly' || timeObj.type === 'solar') {
 
     const sorted = [...(timeObj.days||[])].sort((a,b)=>a-b);
 
-    if (sorted.length <= 3) return `月${sorted.join('/')}日`;
+    if (sorted.length <= 3) return `阳历${sorted.join('/')}日`;
 
-    return `月${sorted.length}次`;
+    return `阳历月${sorted.length}次`;
 
+  }
+
+  if (timeObj.type === 'festival') {
+    const cal = timeObj.calendar === 'solar' ? '阳历' : '农历';
+    const dates = (timeObj.dates||[]).slice(0,2).map(d=>{
+      const [m, day] = String(d).split('-').map(Number);
+      return timeObj.calendar === 'solar'
+        ? `${m}/${day}`
+        : `${LUNAR_MONTHS[m-1]||m+'月'}${LUNAR_DAYS_30[day-1]||day}`;
+    }).join('、');
+    return `${cal}${dates}${(timeObj.dates||[]).length>2?'等':''}`;
+  }
+
+  if (timeObj.type === 'lunar_event') {
+    return `农历${LUNAR_MONTHS[(timeObj.month||1)-1]||timeObj.month+'月'}${LUNAR_DAYS_30[(timeObj.day||1)-1]||timeObj.day}`;
   }
 
   if (timeObj.type === 'custom') return (timeObj.custom||'').slice(0,8);
@@ -11322,7 +11862,7 @@ function fillAddr() {
 
   // 没有定位时直接触发定位，定位成功后自动填入
 
-  if (!hasLocation || !userLat || !userLng) {
+  if (!hasLocation || !isValidPosition(userLat, userLng)) {
 
     const addrBtn = document.querySelector('#addr-input ~ button') || document.querySelector('[onclick="fillAddr()"]');
 
@@ -16498,13 +17038,23 @@ async function submitFeedback() {
 
     try {
 
-      const res  = await fetch('/api/markets?per_page=500');
+      let renderedFirstPage = false;
 
-      const data = await res.json();
+      const list = await fetchAllMarketsFromApi({}, {
+        perPage: 200,
+        onPage: (pageList, all, meta) => {
+          if (!pageList.length) return;
+          MARKETS = all.map(_mapApiMarket);
+          if (!renderedFirstPage || meta.page % 4 === 0 || all.length >= meta.total) {
+            renderedFirstPage = true;
+            if (typeof renderMarkets === 'function') renderMarkets();
+          }
+        }
+      });
 
-      if (data.code === 200 && data.data) {
+      if (list.length) {
 
-        MARKETS = (data.data.list || []).map(_mapApiMarket);
+        MARKETS = list.map(_mapApiMarket);
 
         if (typeof renderMarkets === 'function') renderMarkets();
 
@@ -16550,9 +17100,7 @@ async function submitFeedback() {
 
 
 
-    // 3. 后台 geocoding（补全无坐标集市）
-
-    if (window.AMap) _geocodeAllMissing();
+    // 坐标补全交给后台脚本；下拉刷新不触发全量 geocoding。
 
   }
 
@@ -16583,4 +17131,3 @@ async function submitFeedback() {
 </body>
 
 </html>
-
