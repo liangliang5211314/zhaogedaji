@@ -102,6 +102,55 @@ passed
 
 ---
 
+## 地区搜索与三个触发式弹层
+
+- 设计源：Figma `3u4j48Ti8r2Er7gipvfAJT`，节点 `30:5`、`30:6`、`30:7`、`30:8`
+- 视口：375 × 812
+- 预览入口：`?preview=region-search`、`trigger-login`、`trigger-reminder`、`trigger-navigation`
+
+| 状态 | 设计截图 | 实现截图 | 并排对比 |
+| --- | --- | --- | --- |
+| 地区搜索页 | `output/frontend-trigger-sheets/reference-region-search.png` | `output/frontend-trigger-sheets/implementation-region-search.png` | `output/frontend-trigger-sheets/comparison-region-search.png` |
+| 触发式登录 | `output/frontend-trigger-sheets/reference-login-sheet.png` | `output/frontend-trigger-sheets/implementation-login-sheet.png` | `output/frontend-trigger-sheets/comparison-login-sheet.png` |
+| 收藏后提醒 | `output/frontend-trigger-sheets/reference-reminder-sheet.png` | `output/frontend-trigger-sheets/implementation-reminder-sheet.png` | `output/frontend-trigger-sheets/comparison-reminder-sheet.png` |
+| 首次导航选择 | `output/frontend-trigger-sheets/reference-navigation-sheet.png` | `output/frontend-trigger-sheets/implementation-navigation-sheet.png` | `output/frontend-trigger-sheets/comparison-navigation-sheet.png` |
+
+### Findings
+
+- 无遗留 P0 / P1 / P2 问题。
+- P3：微信按钮使用 Material Symbols 的正式消息图标，Figma 草稿使用圆形占位符；尺寸与基线一致。
+- P3：地图应用图标为文字缩写容器，待接入各平台官方品牌资产时替换，不影响选项识别与交互。
+
+### 五项保真检查
+
+- 字体与排版：通过。页标题和弹层标题使用 Noto Serif SC，正文与控件使用 Noto Sans SC；正文 16px，说明 12–14px。
+- 间距与布局：通过。地区搜索为 375 × 812 独立页；登录、提醒、导航弹层分别从 Y=346、286、224 开始，高度 466、526、588px。
+- 色彩与 tokens：通过。登录/导航主操作使用深松绿，提醒确认使用暖陶红，地区热度点使用稻谷金与深松绿；状态均带文字。
+- 图像与图标：通过。功能图标统一 Material Symbols；地图平台以可替换的 44px 品牌槽承载，不使用 emoji。
+- 文案与数据：通过。游客可继续浏览；收藏、提醒、评价时触发一步登录；收藏后只询问一次提醒；提醒时间为前晚 20:00 与当天 06:30。
+
+### 状态与交互检查
+
+- 地区搜索支持城市、区县、乡镇关键词；实测输入“四川”后只保留“四川 · 彭州市”。选择后立即更新区县并重算推荐，不再打开四级联动。
+- 登录弹层提供微信主入口与手机号验证码入口；新用户登录后直接回内容，不再进入多步 onboarding；待执行的收藏/提醒/评价动作可恢复。
+- 每日营业类集市不会创建提醒；非每日营业类收藏后仅首次询问，两个提醒开关均可操作，至少保留一个时间。
+- 导航首次弹出高德/百度/腾讯选择，高德置顶；iOS 按 user agent 动态追加苹果地图，四选项时列表可滚动。
+- 实测选择百度地图后主按钮同步为“用百度地图导航”；记住偏好后后续直接打开，设置页可修改的入口在下一分区落地。
+- 关闭按钮、返回、重定位、登录、提醒与导航主按钮热区均不小于 44 × 44px；四个预览入口控制台无 error。
+
+### Comparison history
+
+1. 首轮登录和导航上下文仍露出首页顶部搜索栏，修正预览与运行时页面层级后，弹层上下文从状态栏下方开始，与 Figma 一致。
+2. 首轮登录内容整体偏上约 24px，调整微信按钮与分隔区间距；导航标题偏上约 10px，按独立弹层修正。
+3. 地区热门卡片首轮名称与标签挤在同一行，修正为名称/特色标签两行，并保持集市数量右对齐。
+4. 修正后重新以同一 375 × 812 视口采集四态并排图；未发现新的 P0 / P1 / P2 差异。
+
+### final result
+
+passed
+
+---
+
 ## 集市详情页两态
 
 - 设计源：Figma `3u4j48Ti8r2Er7gipvfAJT`，节点 `21:11`、`21:14`

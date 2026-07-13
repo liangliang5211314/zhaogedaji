@@ -2056,6 +2056,30 @@ body.detail-preview .app-status-preview{display:flex;}
 .detail-v2-empty{min-height:292px;display:flex;flex-direction:column;align-items:center;text-align:center;padding:14px 16px 12px;}.detail-v2-empty-mark{width:82px;height:82px;border-radius:26px;background:#FFF0E6;color:var(--color-brand);display:flex;align-items:center;justify-content:center;margin-top:8px;}.detail-v2-empty-mark .material-symbols-outlined{font-size:36px;}.detail-v2-empty-title{margin-top:12px;font:700 17px/25px 'Noto Serif SC','Songti SC',serif;color:var(--color-ink);}.detail-v2-empty-copy{margin-top:8px;color:#737A73;font-size:13px;line-height:21px;}.detail-v2-empty-button{width:172px;height:46px;margin-top:12px;border:0;border-radius:15px;background:var(--color-brand);color:#fff;font:600 15px/22px 'Noto Sans SC',sans-serif;cursor:pointer;}
 .detail-v2-hero-button:focus-visible,.detail-v2-action:focus-visible,.detail-v2-map-button:focus-visible,.detail-v2-write:focus-visible,.detail-v2-empty-button:focus-visible{outline:2px solid var(--color-brand);outline-offset:2px;}
 
+/* ═══════════════════════════════════════════════════════════
+   APP V2 · 地区搜索与触发式弹层（Figma 05）
+   ═══════════════════════════════════════════════════════════ */
+body.trigger-preview{background:#F1EEE8;}.trigger-preview #user-screen .user-app{border-radius:24px;}.trigger-preview #user-screen .user-top-bar,.trigger-preview #user-screen .user-bottom-nav{display:none!important;}
+.region-v2-active #user-screen .user-top-bar,.region-v2-active #user-screen .user-bottom-nav{display:none!important;}
+.region-v2-page{min-height:100%;padding:0 16px 24px;background:var(--color-paper);}
+.region-v2-header{height:64px;margin:0 -16px;padding:0 12px;display:flex;align-items:center;justify-content:center;background:#fff;position:relative;}
+.region-v2-back{position:absolute;left:12px;width:44px;height:44px;border:0;background:transparent;color:var(--color-ink);display:flex;align-items:center;justify-content:center;cursor:pointer;}.region-v2-back .material-symbols-outlined{font-size:22px;}
+.region-v2-header h1{font:700 20px/29px 'Noto Serif SC','Songti SC',serif;color:var(--color-ink);}
+.region-v2-search{height:52px;margin-top:16px;padding:0 14px;display:flex;align-items:center;gap:10px;border:1px solid var(--color-border);border-radius:16px;background:#fff;}.region-v2-search .material-symbols-outlined{font-size:18px;color:#657067;}.region-v2-search input{min-width:0;flex:1;border:0;outline:0;background:transparent;font:400 16px/24px 'Noto Sans SC',sans-serif;color:var(--color-ink);}
+.region-v2-current{height:82px;margin-top:16px;padding:0 16px;display:flex;align-items:center;border-radius:16px;background:#fff;box-shadow:0 7px 20px rgba(46,38,28,.08);}.region-v2-current-icon{width:48px;height:48px;border-radius:50%;background:#EAF3ED;color:var(--color-pine);display:flex;align-items:center;justify-content:center;}.region-v2-current-icon .material-symbols-outlined{font-size:24px;}.region-v2-current-copy{margin-left:14px;flex:1;}.region-v2-current-label{font-size:13px;line-height:19px;color:#8A918B;}.region-v2-current-name{font-size:16px;line-height:24px;font-weight:600;color:var(--color-ink);}.region-v2-relocate{min-width:70px;height:44px;border:0;background:transparent;color:var(--color-brand);font:500 14px/20px 'Noto Sans SC',sans-serif;cursor:pointer;}
+.region-v2-block-title{margin-top:24px;font:700 17px/25px 'Noto Serif SC','Songti SC',serif;color:var(--color-ink);}.region-v2-subtitle{margin-top:2px;color:#72766F;font-size:13px;line-height:19px;}.region-v2-recents{display:flex;gap:10px;margin-top:12px;}.region-v2-recent{height:40px;padding:0 16px;border:0;border-radius:20px;background:#fff;color:#4D554E;font:500 14px/20px 'Noto Sans SC',sans-serif;cursor:pointer;}
+.region-v2-hot-list{display:flex;flex-direction:column;gap:8px;margin-top:16px;}.region-v2-hot{height:60px;padding:0 12px 0 14px;display:flex;align-items:center;border:0;border-radius:14px;background:#fff;text-align:left;cursor:pointer;}.region-v2-dot{width:20px;height:20px;border-radius:50%;margin-right:14px;background:#E0A832;}.region-v2-hot:nth-child(even) .region-v2-dot{background:#2D6A4F;}.region-v2-hot-copy{min-width:0;flex:1;}.region-v2-hot-name{display:block;font-size:15px;line-height:22px;font-weight:600;color:var(--color-ink);}.region-v2-hot-tags{display:block;font-size:12px;line-height:18px;color:#72766F;}.region-v2-count{color:var(--color-brand);font-size:13px;line-height:19px;white-space:nowrap;}.region-v2-note{margin-top:22px;padding:11px 14px;border-radius:14px;background:#F4EBD8;color:#657067;font-size:12px;line-height:18px;}
+.trigger-v2-context{display:none;min-height:788px;padding:0 16px;background:var(--color-paper);}.trigger-preview .trigger-v2-context{display:block;}.trigger-v2-context-head{height:78px;margin:0 -16px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;background:#fff;border-bottom:1px solid var(--color-border);}.trigger-v2-context-head h2{font:700 20px/29px 'Noto Serif SC',serif;}.trigger-v2-context-card{height:182px;margin-top:20px;padding:16px;border-radius:18px;background:#fff;box-shadow:var(--shadow-card);}.trigger-v2-context-card .detail-v2-status{margin-bottom:12px;}.trigger-v2-context-card h3{font:700 22px/31px 'Noto Serif SC',serif;}.trigger-v2-context-card p{margin-top:4px;color:#657067;font-size:14px;line-height:21px;}.trigger-v2-context-action{float:right;margin-top:12px;height:48px;padding:0 18px;border:0;border-radius:14px;background:#FFF0E6;color:var(--color-brand);font-size:14px;font-weight:600;}
+.trigger-v2-overlay{position:fixed;inset:0;z-index:1200;display:none;align-items:flex-end;justify-content:center;background:rgba(31,41,35,.48);}.trigger-v2-overlay.open{display:flex;}.trigger-v2-sheet{width:min(100%,375px);padding:18px 16px 24px;border-radius:26px 26px 0 0;background:#fff;box-shadow:0 -8px 30px rgba(31,41,35,.12);}.trigger-v2-sheet.login{height:466px;}.trigger-v2-sheet.reminder{height:526px;}.trigger-v2-sheet.navigation{height:588px;}.trigger-v2-handle{width:40px;height:4px;margin:0 auto 10px;border-radius:2px;background:#DED8CC;}.trigger-v2-close{position:absolute;right:16px;top:18px;width:44px;height:44px;border:0;background:transparent;color:#657067;display:flex;align-items:center;justify-content:center;cursor:pointer;}.trigger-v2-sheet-inner{position:relative;height:100%;}.trigger-v2-kicker{margin-top:16px;color:var(--color-brand);font-size:13px;line-height:19px;font-weight:600;}.trigger-v2-title{margin-top:8px;font:700 23px/32px 'Noto Serif SC','Songti SC',serif;color:var(--color-ink);}.trigger-v2-copy{margin-top:4px;color:#737A73;font-size:14px;line-height:21px;}.trigger-v2-primary{width:100%;height:56px;border:0;border-radius:16px;background:var(--color-pine);color:#fff;font:600 16px/24px 'Noto Sans SC',sans-serif;cursor:pointer;}.trigger-v2-primary.brand{background:var(--color-brand);}.trigger-v2-primary.login-wechat{margin-top:24px;}.trigger-v2-primary .material-symbols-outlined{vertical-align:-4px;margin-right:8px;}.trigger-v2-divider{height:36px;display:flex;align-items:center;gap:18px;color:#8A918B;font-size:12px;}.trigger-v2-divider::before,.trigger-v2-divider::after{content:'';height:1px;flex:1;background:#E6E0D5;}.trigger-v2-secondary{width:100%;height:54px;border:1px solid var(--color-border);border-radius:16px;background:#fff;color:var(--color-ink);font:600 15px/22px 'Noto Sans SC',sans-serif;cursor:pointer;}.trigger-v2-promise{margin-top:18px;padding:9px 16px;border-radius:14px;background:#F4F0E8;color:#6F776F;font-size:12px;line-height:18px;}.trigger-v2-agreement{margin-top:24px;text-align:center;color:#8A918B;font-size:11px;line-height:17px;}
+.trigger-v2-success{margin-top:14px;display:flex;align-items:center;gap:12px;color:var(--color-pine);font-size:15px;font-weight:600;}.trigger-v2-success-icon{width:42px;height:42px;border-radius:50%;background:#E6F2E9;display:flex;align-items:center;justify-content:center;}.trigger-v2-success-icon .material-symbols-outlined{font-size:22px;}.trigger-v2-reminder-title{margin-top:10px;font:700 23px/32px 'Noto Serif SC',serif;}.trigger-v2-reminder-row{height:70px;margin-top:12px;padding:0 16px;display:flex;align-items:center;border-radius:14px;background:#F4F0E8;}.trigger-v2-reminder-copy{flex:1;}.trigger-v2-reminder-name{font-size:15px;line-height:22px;font-weight:600;}.trigger-v2-reminder-sub{font-size:12px;line-height:18px;color:#737A73;}.trigger-v2-reminder-time{margin-right:10px;color:var(--color-pine);font-size:14px;font-weight:600;}.trigger-v2-switch{width:38px;height:22px;border:0;border-radius:11px;background:var(--color-pine);position:relative;cursor:pointer;}.trigger-v2-switch::after{content:'';position:absolute;width:16px;height:16px;top:3px;right:3px;border-radius:50%;background:#fff;}.trigger-v2-switch.off{background:#C8CBC6;}.trigger-v2-switch.off::after{right:19px;}.trigger-v2-reminder-note{margin-top:18px;color:#737A73;font-size:12px;line-height:18px;}.trigger-v2-reminder-actions{margin-top:16px;}.trigger-v2-link{width:100%;height:48px;border:0;background:transparent;color:#657067;font:500 14px/20px 'Noto Sans SC',sans-serif;cursor:pointer;}
+.trigger-v2-map-list{display:flex;flex-direction:column;gap:12px;margin-top:18px;}.trigger-v2-map-option{height:70px;padding:0 12px;display:flex;align-items:center;border:1px solid transparent;border-radius:14px;background:#F4F0E8;cursor:pointer;}.trigger-v2-map-option.selected{border:2px solid var(--color-pine);background:#EAF3ED;}.trigger-v2-map-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:#E0A832;color:#fff;font-size:16px;font-weight:700;}.trigger-v2-map-option.selected .trigger-v2-map-icon{background:var(--color-pine);}.trigger-v2-map-copy{margin-left:12px;flex:1;}.trigger-v2-map-name{font-size:15px;line-height:22px;font-weight:600;}.trigger-v2-map-sub{font-size:12px;line-height:18px;color:#737A73;}.trigger-v2-recommend{height:24px;padding:0 10px;border-radius:12px;background:#F4D982;color:#6E5210;font-size:12px;display:flex;align-items:center;}.trigger-v2-radio{width:20px;height:20px;margin-left:12px;border:2px solid #DDD5C8;border-radius:50%;}.trigger-v2-map-option.selected .trigger-v2-radio{border:6px solid var(--color-pine);}.trigger-v2-remember{height:58px;margin-top:24px;padding:0 16px;display:flex;align-items:center;justify-content:space-between;border-radius:14px;background:#F4F0E8;font-size:14px;font-weight:600;}.trigger-v2-nav-help{margin-top:16px;text-align:center;color:#8A918B;font-size:11px;line-height:17px;}
+.trigger-v2-sheet.login .login-wechat{margin-top:32px;}.trigger-v2-sheet.login .trigger-v2-divider{height:52px;}
+.trigger-v2-sheet.reminder .trigger-v2-reminder-title{margin-top:17px;}.trigger-v2-sheet.reminder .trigger-v2-reminder-row{margin-top:18px;}.trigger-v2-sheet.reminder .trigger-v2-reminder-row+.trigger-v2-reminder-row{margin-top:12px;}.trigger-v2-sheet.reminder .trigger-v2-reminder-note{margin-top:24px;}.trigger-v2-sheet.reminder .trigger-v2-reminder-actions{margin-top:18px;}
+.trigger-v2-sheet.navigation .trigger-v2-title{margin-top:18px;}
+.trigger-v2-sheet.navigation .trigger-v2-map-list{max-height:258px;overflow-y:auto;scrollbar-width:none;}
+.trigger-v2-sheet.navigation .trigger-v2-map-name,.trigger-v2-sheet.navigation .trigger-v2-map-sub{display:block;}
+.region-v2-back:focus-visible,.region-v2-relocate:focus-visible,.region-v2-recent:focus-visible,.region-v2-hot:focus-visible,.trigger-v2-close:focus-visible,.trigger-v2-primary:focus-visible,.trigger-v2-secondary:focus-visible,.trigger-v2-link:focus-visible,.trigger-v2-map-option:focus-visible{outline:2px solid var(--color-brand);outline-offset:2px;}
+
 
 
 </style>
@@ -2728,6 +2752,29 @@ body.detail-preview .app-status-preview{display:flex;}
           </div>
         </section>
       </div>
+
+      <!-- 轻量地区搜索页 -->
+      <section id="user-page-region-v2" class="hidden region-v2-page" aria-labelledby="region-v2-title">
+        <header class="region-v2-header"><button class="region-v2-back" type="button" onclick="closeRegionSearchV2()" aria-label="返回"><span class="material-symbols-outlined" aria-hidden="true">chevron_left</span></button><h1 id="region-v2-title">选择地区</h1></header>
+        <label class="region-v2-search"><span class="material-symbols-outlined" aria-hidden="true">search</span><input id="region-v2-input" type="search" placeholder="搜索城市、区县或乡镇" oninput="filterRegionV2(this.value)"></label>
+        <section class="region-v2-current"><div class="region-v2-current-icon"><span class="material-symbols-outlined" aria-hidden="true">my_location</span></div><div class="region-v2-current-copy"><div class="region-v2-current-label">当前定位</div><div class="region-v2-current-name" id="region-v2-current-name">临沂市 · 兰山区</div></div><button class="region-v2-relocate" type="button" onclick="doLocate();showToast('正在重新定位')">重新定位</button></section>
+        <h2 class="region-v2-block-title">最近访问</h2>
+        <div class="region-v2-recents"><button class="region-v2-recent" type="button" onclick="selectRegionV2('临沂市 · 兰山区')">临沂市 · 兰山区</button><button class="region-v2-recent" type="button" onclick="selectRegionV2('日照市 · 东港区')">日照市 · 东港区</button></div>
+        <h2 class="region-v2-block-title">旅行热门地区</h2><p class="region-v2-subtitle">按当地大集、庙会与特色市场活跃度推荐</p>
+        <div class="region-v2-hot-list" id="region-v2-hot-list">
+          <button class="region-v2-hot" type="button" data-search="山东 青州市 古城早市 花卉大集" onclick="selectRegionV2('山东 · 青州市')"><span class="region-v2-dot"></span><span class="region-v2-hot-copy"><span class="region-v2-hot-name">山东 · 青州市</span><span class="region-v2-hot-tags">古城早市、花卉大集</span></span><span class="region-v2-count">12 个集市</span></button>
+          <button class="region-v2-hot" type="button" data-search="四川 彭州市 川西土货 周末赶场" onclick="selectRegionV2('四川 · 彭州市')"><span class="region-v2-dot"></span><span class="region-v2-hot-copy"><span class="region-v2-hot-name">四川 · 彭州市</span><span class="region-v2-hot-tags">川西土货、周末赶场</span></span><span class="region-v2-count">18 个集市</span></button>
+          <button class="region-v2-hot" type="button" data-search="云南 大理市 乡镇集 民族市集" onclick="selectRegionV2('云南 · 大理市')"><span class="region-v2-dot"></span><span class="region-v2-hot-copy"><span class="region-v2-hot-name">云南 · 大理市</span><span class="region-v2-hot-tags">乡镇集、民族市集</span></span><span class="region-v2-count">15 个集市</span></button>
+          <button class="region-v2-hot" type="button" data-search="河南 洛阳市 庙会 古玩 早市" onclick="selectRegionV2('河南 · 洛阳市')"><span class="region-v2-dot"></span><span class="region-v2-hot-copy"><span class="region-v2-hot-name">河南 · 洛阳市</span><span class="region-v2-hot-tags">庙会、古玩与早市</span></span><span class="region-v2-count">21 个集市</span></button>
+        </div>
+        <p class="region-v2-note">支持城市、区县、乡镇搜索；选择后立即重算推荐，不再弹出省市区街道四级联动。</p>
+      </section>
+
+      <!-- 触发式弹层预览上下文 -->
+      <section id="user-page-trigger-v2" class="hidden trigger-v2-context" aria-label="触发式弹层上下文">
+        <header class="trigger-v2-context-head"><span class="material-symbols-outlined" aria-hidden="true">chevron_left</span><h2 id="trigger-v2-context-title">李官大集</h2><span class="material-symbols-outlined" aria-hidden="true">north_east</span></header>
+        <article class="trigger-v2-context-card"><span class="detail-v2-status">明天开集</span><h3>李官大集</h3><p>阴历逢一、逢六 · 07:00–13:00</p><p>4.8分 · 126条</p><button class="trigger-v2-context-action" type="button">收藏</button></article>
+      </section>
 
             <!-- NEARBY -->
 
@@ -4091,7 +4138,22 @@ body.detail-preview .app-status-preview{display:flex;}
 
 
 
-<!-- LOCATION MODAL (bottom sheet) — 省市区三列联动 高德风格 -->
+<!-- 触发式登录：游客浏览，收藏/评价/提醒时一步登录 -->
+<div class="trigger-v2-overlay" id="login-trigger-v2" onclick="if(event.target===this)closeTriggerV2('login-trigger-v2')">
+  <section class="trigger-v2-sheet login" role="dialog" aria-modal="true" aria-labelledby="login-trigger-title"><div class="trigger-v2-sheet-inner"><div class="trigger-v2-handle"></div><button class="trigger-v2-close" type="button" onclick="closeTriggerV2('login-trigger-v2')" aria-label="关闭"><span class="material-symbols-outlined" aria-hidden="true">close</span></button><p class="trigger-v2-kicker" id="login-trigger-kicker">继续刚才的收藏</p><h2 class="trigger-v2-title" id="login-trigger-title">登录后收藏李官大集</h2><p class="trigger-v2-copy">不会挡住内容浏览，登录完成后自动继续操作。</p><button class="trigger-v2-primary login-wechat" type="button" onclick="startTriggerLoginV2('wechat')"><span class="material-symbols-outlined" aria-hidden="true">chat</span>微信一键登录</button><div class="trigger-v2-divider">或</div><button class="trigger-v2-secondary" type="button" onclick="startTriggerLoginV2('phone')">手机号验证码登录</button><p class="trigger-v2-promise">只用于同步收藏、提醒与评价记录<br>不强制完善资料，无额外引导步骤</p><p class="trigger-v2-agreement">登录即同意《用户协议》和《隐私政策》</p></div></section>
+</div>
+
+<!-- 收藏成功后仅询问一次提醒 -->
+<div class="trigger-v2-overlay" id="reminder-trigger-v2" onclick="if(event.target===this)closeTriggerV2('reminder-trigger-v2')">
+  <section class="trigger-v2-sheet reminder" role="dialog" aria-modal="true" aria-labelledby="reminder-trigger-title"><div class="trigger-v2-sheet-inner"><div class="trigger-v2-handle"></div><button class="trigger-v2-close" type="button" onclick="closeTriggerV2('reminder-trigger-v2')" aria-label="关闭"><span class="material-symbols-outlined" aria-hidden="true">close</span></button><div class="trigger-v2-success"><span class="trigger-v2-success-icon"><span class="material-symbols-outlined" aria-hidden="true">check</span></span><span id="reminder-trigger-success">已收藏李官大集</span></div><h2 class="trigger-v2-reminder-title" id="reminder-trigger-title">要开启赶集提醒吗？</h2><p class="trigger-v2-copy">默认在开集前一天晚上和当天早晨各提醒一次。</p><div class="trigger-v2-reminder-row"><div class="trigger-v2-reminder-copy"><div class="trigger-v2-reminder-name">前一天晚上</div><div class="trigger-v2-reminder-sub">提前准备路线和采购清单</div></div><span class="trigger-v2-reminder-time">20:00</span><button class="trigger-v2-switch" type="button" aria-label="前一天晚上提醒已开启"></button></div><div class="trigger-v2-reminder-row"><div class="trigger-v2-reminder-copy"><div class="trigger-v2-reminder-name">开集当天早晨</div><div class="trigger-v2-reminder-sub">出发前确认天气与停市通知</div></div><span class="trigger-v2-reminder-time">06:30</span><button class="trigger-v2-switch" type="button" aria-label="开集当天早晨提醒已开启"></button></div><p class="trigger-v2-reminder-note">此询问只出现一次，以后可在“收藏”页修改</p><div class="trigger-v2-reminder-actions"><button class="trigger-v2-primary brand" type="button" onclick="confirmReminderV2()">开启两次提醒</button><button class="trigger-v2-link" type="button" onclick="dismissReminderV2()">暂不开启，只收藏</button></div></div></section>
+</div>
+
+<!-- 首次导航选择，按平台动态渲染地图应用 -->
+<div class="trigger-v2-overlay" id="navigation-trigger-v2" onclick="if(event.target===this)closeTriggerV2('navigation-trigger-v2')">
+  <section class="trigger-v2-sheet navigation" role="dialog" aria-modal="true" aria-labelledby="navigation-trigger-title"><div class="trigger-v2-sheet-inner"><div class="trigger-v2-handle"></div><button class="trigger-v2-close" type="button" onclick="closeTriggerV2('navigation-trigger-v2')" aria-label="关闭"><span class="material-symbols-outlined" aria-hidden="true">close</span></button><h2 class="trigger-v2-title" id="navigation-trigger-title">选择地图应用</h2><p class="trigger-v2-copy">首次选择后记住偏好，下次可直接打开。</p><div class="trigger-v2-map-list" id="trigger-v2-map-list"></div><div class="trigger-v2-remember"><span>记住本次选择</span><button class="trigger-v2-switch" id="trigger-v2-remember" type="button" aria-label="记住地图选择已开启"></button></div><button class="trigger-v2-primary" id="trigger-v2-nav-button" type="button" style="margin-top:16px" onclick="confirmNavigationV2()">用高德地图导航</button><p class="trigger-v2-nav-help">可在“我的 &gt; 设置 &gt; 默认地图”中修改</p></div></section>
+</div>
+
+<!-- LOCATION MODAL (legacy fallback; 新入口已切换为轻量地区页) -->
 
 <div class="modal-overlay" id="location-modal" onclick="if(event.target===this)cancelLocationModal()">
 
@@ -5003,11 +5065,7 @@ async function doLoginPwd() {
 
         if (json.data.isNew) {
 
-          currentUser = user;
-
-          localStorage.setItem('zjsCurrentUser', JSON.stringify(user));
-
-          showScreen('onboarding-screen');
+          loginSuccess(user);
 
         } else {
 
@@ -5155,15 +5213,11 @@ async function loginWithApi(phone, password, type, localUser, isNewUser = false)
 
       userDB.update(localUser.id, localUser);
 
-      // 首次登录 → 跳到引导页
+      // 首次登录也直接回到内容，不再增加多步引导。
 
       if (json.data.isNew) {
 
-        currentUser = localUser;
-
-        localStorage.setItem('zjsCurrentUser', JSON.stringify(localUser));
-
-        showScreen('onboarding-screen');
+        loginSuccess(localUser);
 
         return;
 
@@ -5177,15 +5231,11 @@ async function loginWithApi(phone, password, type, localUser, isNewUser = false)
 
   }
 
-  // API 失败时：新用户走引导页，老用户正常登录
+  // API 失败时也直接完成本地登录，游客内容不被引导流程阻塞。
 
   if (isNewUser) {
 
-    currentUser = localUser;
-
-    localStorage.setItem('zjsCurrentUser', JSON.stringify(localUser));
-
-    showScreen('onboarding-screen');
+    loginSuccess(localUser);
 
   } else {
 
@@ -5214,6 +5264,8 @@ function loginSuccess(user) {
   const adminCard = document.getElementById('admin-entry-card');
 
   if (adminCard) adminCard.style.display = isAdminPhone(currentUser.phone) ? '' : 'none';
+
+  resumePendingActionV2();
 
   // 检测是否有登录过期前保存的待提交草稿
 
@@ -5335,11 +5387,7 @@ async function _handleWxCode(code) {
 
       if (json.data.isNew) {
 
-        currentUser = { ...localUser, ...sv };
-
-        localStorage.setItem('zjsCurrentUser', JSON.stringify(currentUser));
-
-        showScreen('onboarding-screen');
+        loginSuccess({ ...localUser, ...sv });
 
       } else {
 
@@ -5397,9 +5445,7 @@ function showScreen(id) {
 
 function requireLoginScreen(msg = '请先登录') {
 
-  showToast(msg);
-
-  showScreen('login-screen');
+  openLoginTriggerV2(msg);
 
   return false;
 
@@ -6200,9 +6246,12 @@ let _reminderActive = false; // 当前集市是否已设置提醒
 
 function openReminderSheet() {
 
-  if (!currentUser) { showToast('请先登录后设置提醒'); return; }
+  if (!currentUser) { requireLoginScreen('登录后开启提醒'); return; }
 
   if (!currentMarket) return;
+
+  openReminderTriggerV2(currentMarket);
+  return;
 
   // 重置选中状态
 
@@ -6625,6 +6674,8 @@ function isMarketFaved(marketId) {
 function toggleFavBtn() {
 
   if (!currentMarket) return;
+
+  if (!currentUser) { requireLoginScreen('收藏后可接收开集提醒'); return; }
 
   if (isMarketFaved(currentMarket.id)) {
 
@@ -7456,6 +7507,177 @@ function _updateCategoryList(cats) {
 
 
 
+(function triggerV2Runtime(){
+  let previousUserPageV2 = 'home';
+  let selectedMapProviderV2 = 'amap';
+
+  window.openRegionSearchV2 = function(){
+    previousUserPageV2 = _getActivePage();
+    document.body.classList.add('region-v2-active');
+    document.querySelectorAll('[id^="user-page-"]').forEach(page => page.classList.add('hidden'));
+    document.getElementById('user-page-region-v2')?.classList.remove('hidden');
+    const current = document.getElementById('loc-name-display')?.textContent || '临沂市 · 兰山区';
+    setText('region-v2-current-name',current.replace(/市(?=[^·])/,'市 · '));
+    document.querySelector('.user-scroll-body')?.scrollTo?.({top:0});
+  };
+
+  window.closeRegionSearchV2 = function(){
+    document.body.classList.remove('region-v2-active');
+    switchUserPage(previousUserPageV2 === 'region-v2' ? 'home' : previousUserPageV2);
+  };
+
+  window.filterRegionV2 = function(value){
+    const keyword = String(value || '').trim().toLowerCase();
+    document.querySelectorAll('.region-v2-hot').forEach(item => {
+      item.style.display = !keyword || (item.dataset.search || '').toLowerCase().includes(keyword) ? '' : 'none';
+    });
+  };
+
+  window.selectRegionV2 = function(label){
+    const clean = String(label).replace(/\s*·\s*/g,'·');
+    selectedRegion = clean.split('·').pop() || clean;
+    const display = document.getElementById('loc-name-display');
+    if (display) display.textContent = clean.replaceAll('·','');
+    localStorage.setItem('zjsSelectedRegion',clean);
+    closeRegionSearchV2();
+    renderHomeNearbyForRegion();
+    showToast(`已切换到${label}`);
+  };
+
+  window.closeTriggerV2 = function(id){ document.getElementById(id)?.classList.remove('open'); };
+
+  window.openLoginTriggerV2 = function(reason='继续使用该功能'){
+    const marketName = currentMarket?.name || '这个集市';
+    const action = /查看收藏/.test(reason) ? '收藏页' : /评价/.test(reason) ? '评价' : /提醒/.test(reason) ? '提醒' : /收藏/.test(reason) ? '收藏' : '登录';
+    localStorage.setItem('zjsPendingActionV2',JSON.stringify({action,marketId:currentMarket?.id || null,marketName}));
+    setText('login-trigger-kicker',`继续刚才的${action === '收藏页' ? '查看收藏' : action}`);
+    setText('login-trigger-title',action === '收藏页' ? '登录后查看我的收藏' : action === '登录' ? '登录后继续使用找个大集' : `登录后${action}${marketName}`);
+    document.getElementById('login-trigger-v2')?.classList.add('open');
+  };
+
+  window.startTriggerLoginV2 = function(method){
+    closeTriggerV2('login-trigger-v2');
+    if (new URLSearchParams(location.search).get('preview')) { showToast(method === 'wechat' ? '微信登录预览' : '手机号登录预览'); return; }
+    if (method === 'wechat') doWxLogin();
+    else showScreen('login-screen');
+  };
+
+  window.resumePendingActionV2 = function(){
+    let pending = null;
+    try { pending = JSON.parse(localStorage.getItem('zjsPendingActionV2') || 'null'); } catch (error) {}
+    if (!pending) return;
+    localStorage.removeItem('zjsPendingActionV2');
+    const market = MARKETS.find(item => String(item.id) === String(pending.marketId)) || currentMarket;
+    if (market) currentMarket = market;
+    setTimeout(() => {
+      if (pending.action === '收藏页') openFavPage();
+      else if (pending.action === '评价') openWriteReview();
+      else if (pending.action === '提醒') openReminderTriggerV2(currentMarket);
+      else if (pending.action === '收藏' && currentMarket) openFavGroupModal(currentMarket);
+    },100);
+  };
+
+  window.openReminderTriggerV2 = function(market=currentMarket){
+    if (!market) return;
+    const openTime = market.openTime || market.open_time || {};
+    if (openTime?.type === 'daily' || market.scheduleStatus === 'daily') { showToast('每日营业类集市不提供开集提醒'); return; }
+    const key = `zjsReminderAsked:${market.id}`;
+    if (localStorage.getItem(key) === '1' && !new URLSearchParams(location.search).get('preview')) return;
+    localStorage.setItem(key,'1');
+    setText('reminder-trigger-success',`已收藏${market.name}`);
+    document.querySelectorAll('#reminder-trigger-v2 .trigger-v2-switch').forEach(toggle => toggle.classList.remove('off'));
+    document.getElementById('reminder-trigger-v2')?.classList.add('open');
+  };
+
+  window.confirmReminderV2 = function(){
+    const enabled = document.querySelectorAll('#reminder-trigger-v2 .trigger-v2-switch:not(.off)').length;
+    if (!enabled) { showToast('请至少保留一个提醒时间'); return; }
+    closeTriggerV2('reminder-trigger-v2');
+    if (new URLSearchParams(location.search).get('preview')) { showToast('已开启两次提醒'); return; }
+    _reminderType = 'recurring';
+    doReminderAction('set');
+  };
+
+  window.dismissReminderV2 = function(){ closeTriggerV2('reminder-trigger-v2'); showToast('已收藏，可在收藏页随时开启提醒'); };
+
+  function mapProvidersV2(){
+    const providers = [
+      {id:'amap',name:'高德地图',icon:'高',sub:'默认推荐 · 乡镇道路覆盖较完整',recommended:true},
+      {id:'baidu',name:'百度地图',icon:'百',sub:'可选地图应用'},
+      {id:'tencent',name:'腾讯地图',icon:'腾',sub:'可选地图应用'}
+    ];
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) providers.push({id:'apple',name:'苹果地图',icon:'苹',sub:'iOS 系统地图'});
+    return providers;
+  }
+
+  window.renderNavigationProvidersV2 = function(){
+    const root = document.getElementById('trigger-v2-map-list');
+    if (!root) return;
+    root.innerHTML = mapProvidersV2().map(provider => `<button class="trigger-v2-map-option${selectedMapProviderV2 === provider.id ? ' selected' : ''}" type="button" onclick="selectNavigationProviderV2('${provider.id}')"><span class="trigger-v2-map-icon">${provider.icon}</span><span class="trigger-v2-map-copy"><span class="trigger-v2-map-name">${provider.name}</span><span class="trigger-v2-map-sub">${provider.sub}</span></span>${provider.recommended ? '<span class="trigger-v2-recommend">推荐</span>' : ''}<span class="trigger-v2-radio"></span></button>`).join('');
+    const label = mapProvidersV2().find(p => p.id === selectedMapProviderV2)?.name || '高德地图';
+    setText('trigger-v2-nav-button',`用${label}导航`);
+  };
+
+  window.selectNavigationProviderV2 = function(provider){ selectedMapProviderV2 = provider; renderNavigationProvidersV2(); };
+
+  window.openNavigationTriggerV2 = function(){
+    selectedMapProviderV2 = localStorage.getItem('zjsDefaultMap') || 'amap';
+    if (!mapProvidersV2().some(p => p.id === selectedMapProviderV2)) selectedMapProviderV2 = 'amap';
+    renderNavigationProvidersV2();
+    document.getElementById('navigation-trigger-v2')?.classList.add('open');
+  };
+
+  window.confirmNavigationV2 = function(){
+    const remember = !document.getElementById('trigger-v2-remember')?.classList.contains('off');
+    if (remember) localStorage.setItem('zjsDefaultMap',selectedMapProviderV2);
+    closeTriggerV2('navigation-trigger-v2');
+    if (new URLSearchParams(location.search).get('preview')) { showToast(`已选择${selectedMapProviderV2}`); return; }
+    launchNavigationV2(selectedMapProviderV2);
+  };
+
+  document.addEventListener('click',event => {
+    const toggle = event.target.closest?.('#trigger-v2-remember');
+    if (toggle) toggle.classList.toggle('off');
+    const reminderToggle = event.target.closest?.('#reminder-trigger-v2 .trigger-v2-switch');
+    if (reminderToggle) reminderToggle.classList.toggle('off');
+  });
+
+  window.launchNavigationV2 = function(provider){
+    const market = currentMarket;
+    if (!market) return;
+    const address = _fullAddr(market) || market.addr || market.region || market.name || '';
+    const lat = Number(market.lat), lng = Number(market.lng);
+    const name = encodeURIComponent(market.name || '目的地');
+    let url = '';
+    if (provider === 'apple') url = `https://maps.apple.com/?daddr=${Number.isFinite(lat)&&Number.isFinite(lng) ? `${lat},${lng}` : encodeURIComponent(address)}&q=${name}`;
+    else if (provider === 'baidu') url = `https://api.map.baidu.com/direction?destination=${Number.isFinite(lat)&&Number.isFinite(lng) ? `latlng:${lat},${lng}|name:${name}` : encodeURIComponent(address)}&mode=driving&output=html`;
+    else if (provider === 'tencent') url = `https://apis.map.qq.com/uri/v1/routeplan?type=drive&tocoord=${Number.isFinite(lat)&&Number.isFinite(lng) ? `${lat},${lng}` : ''}&to=${name}&policy=0&referer=zhaogedaji`;
+    else { navigateToMarket(market.id); return; }
+    const opened = window.open(url,'_blank'); if (!opened) location.href = url;
+  };
+
+  window.applyTriggerV2PreviewState = function(){
+    const mode = new URLSearchParams(location.search).get('preview');
+    const modes = ['region-search','trigger-login','trigger-reminder','trigger-navigation'];
+    if (!modes.includes(mode)) return false;
+    document.body.classList.add('home-preview','trigger-preview');
+    showScreen('user-screen');
+    document.querySelectorAll('[id^="user-page-"]').forEach(page => page.classList.add('hidden'));
+    const time = document.getElementById('home-preview-time'); if (time) time.textContent = '09:26';
+    if (mode === 'region-search') {
+      document.body.classList.add('region-v2-active');
+      document.getElementById('user-page-region-v2')?.classList.remove('hidden');
+      return true;
+    }
+    const context = document.getElementById('user-page-trigger-v2'); context?.classList.remove('hidden');
+    currentMarket = {id:'preview-li-guan-trigger',name:'李官大集',cat:'农村大集',region:'山东省临沂市兰山区',statusLabel:'明天开集',scheduleStatus:'tomorrow',openTime:{type:'lunar'}};
+    if (mode === 'trigger-login') openLoginTriggerV2('收藏');
+    if (mode === 'trigger-reminder') { setText('trigger-v2-context-title','我的收藏'); openReminderTriggerV2(currentMarket); }
+    if (mode === 'trigger-navigation') openNavigationTriggerV2();
+    return true;
+  };
+})();
+
 (function detailV2Runtime(){
   const PREVIEW_TODAY = '2026-07-13';
   const FULL_OPEN_DAYS = [
@@ -7617,6 +7839,10 @@ function _updateCategoryList(cats) {
   }
   if (['detail-full','detail-empty'].includes(homePreviewMode)) {
     setTimeout(applyDetailV2PreviewState, 0);
+    return;
+  }
+  if (['region-search','trigger-login','trigger-reminder','trigger-navigation'].includes(homePreviewMode)) {
+    setTimeout(applyTriggerV2PreviewState, 0);
     return;
   }
 
@@ -9251,6 +9477,8 @@ function confirmFavWithGroup() {
 
 
   renderFavList();
+
+  openReminderTriggerV2(currentMarket);
 
 }
 
@@ -10910,6 +11138,9 @@ function openAmapNavigation() {
 
   if (!currentMarket) return;
 
+  const preferredMap = localStorage.getItem('zjsDefaultMap');
+  if (!preferredMap) { openNavigationTriggerV2(); return; }
+
   // 记录访问（异步，不阻塞导航）
 
   const token = localStorage.getItem('zjsToken') || '';
@@ -10930,7 +11161,7 @@ function openAmapNavigation() {
 
   }).catch(() => {});
 
-  navigateToMarket(currentMarket.id);
+  launchNavigationV2(preferredMap);
 
 }
 
@@ -11380,9 +11611,7 @@ let addrSelected = { level: -1, text: '全国（不限）', short: '全部地区
 
 function openLocationModal() {
 
-  document.getElementById('location-modal').classList.add('open');
-
-  _renderPickerInit();
+  openRegionSearchV2();
 
 }
 
