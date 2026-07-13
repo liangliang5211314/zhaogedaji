@@ -28,8 +28,8 @@ MARKET_SUFFIXES = (
 )
 PLACE_ENDINGS = ("村", "庄", "镇", "乡", "街道", "社区", "小区", "路", "街")
 REPORT_FIELDS = (
-    "id", "name", "查询词", "命中level", "旧坐标", "新坐标",
-    "偏移距离", "状态", "原因",
+    "id", "name", "region", "查询词", "期望adcode", "命中adcode",
+    "命中level", "旧坐标", "新坐标", "偏移距离", "状态", "原因",
 )
 
 
@@ -37,7 +37,11 @@ def parse_args():
     parser = argparse.ArgumentParser(description="全量精准化集市坐标")
     parser.add_argument("--db", default=str(DEFAULT_DB))
     parser.add_argument("--report", default=str(DEFAULT_REPORT))
-    parser.add_argument("--key", default="", help="默认读取 AMAP_WS_KEY")
+    parser.add_argument(
+        "--key",
+        default="",
+        help="默认依次读取 AMAP_WS_KEY、app_settings.amap_ws_key",
+    )
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--sleep", type=float, default=0.15)
@@ -98,6 +102,33 @@ def place_name(row):
     return strip_market_suffix(address)
 
 
+def place_tokens(row):
+    raw = place_name(row)
+    candidates = []
+
+    def add(value):
+        value = clean_text(value)
+        if len(value) >= 2 and value not in candidates:
+            candidates.append(value)
+
+    repeated = re.fullmatch(r"(.{2,4})\1(镇|乡|村|庄|街道)", raw)
+    if repeated:
+        add(repeated.group(1) + repeated.group(2))
+        add(repeated.group(1))
+
+    village = re.match(r"^(.{2,8}?(?:村|庄))", raw)
+    if village and village.group(1) != raw:
+        add(village.group(1))
+
+    if raw.endswith(("镇", "乡")):
+        for admin_length in (3, 4, 5):
+            if len(raw) - admin_length >= 2:
+                add(raw[:-admin_length])
+
+    add(raw)
+    return candidates
+
+
 def add_village_suffix(name):
     if not name or name.endswith(PLACE_ENDINGS):
         return name
@@ -106,8 +137,11 @@ def add_village_suffix(name):
 
 def build_queries(row):
     region = region_text(row)
-    name = place_name(row)
+    tokens = place_tokens(row)
+    name = tokens[0] if tokens else place_name(row)
     queries = [region + add_village_suffix(name), region + name, row["address"]]
+    for token in tokens[1:4]:
+        queries.extend((region + add_village_suffix(token), region + token))
     result = []
     seen = set()
     for query in queries:
@@ -116,6 +150,19 @@ def build_queries(row):
             seen.add(query)
             result.append(query)
     return result
+
+
+def load_key(conn, explicit=""):
+    key = (explicit or os.environ.get("AMAP_WS_KEY", "")).strip()
+    if key:
+        return key
+    try:
+        row = conn.execute(
+            "SELECT value FROM app_settings WHERE key='amap_ws_key'"
+        ).fetchone()
+    except sqlite3.OperationalError:
+        row = None
+    return str(row[0]).strip() if row and row[0] else ""
 
 
 def haversine_m(lat1, lng1, lat2, lng2):
@@ -135,11 +182,17 @@ def amap_geocode(key, query, city, pause):
         "https://restapi.amap.com/v3/geocode/geo?" + params,
         headers={"User-Agent": "zhaogedaji-geocode/3.0"},
     )
-    try:
-        with urllib.request.urlopen(request, timeout=12) as response:
-            return json.loads(response.read().decode("utf-8"))
-    finally:
-        time.sleep(max(0.0, pause))
+    payload = None
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(request, timeout=12) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        finally:
+            time.sleep(max(0.0, pause))
+        if payload.get("infocode") != "10021":
+            return payload
+        time.sleep(max(0.8, pause * 4) * (attempt + 1))
+    return payload
 
 
 def parse_location(geo):
@@ -157,7 +210,7 @@ def normalize_admin(value):
     return clean_text(value).replace("自治县", "县").replace("自治旗", "旗")
 
 
-def validate_market_result(row, payload):
+def validate_market_result(row, payload, expected_adcode):
     if payload.get("status") != "1":
         return None, f"高德错误:{payload.get('info')}:{payload.get('infocode')}"
     province, city, district = expected_admin(row)
@@ -170,18 +223,22 @@ def validate_market_result(row, payload):
         actual_province = normalize_admin(geo.get("province"))
         actual_city = normalize_admin(geo.get("city"))
         actual_district = normalize_admin(geo.get("district"))
+        actual_adcode = str(geo.get("adcode") or "")
         if province and actual_province and normalize_admin(province) != actual_province:
             rejected.append(f"省不一致:{geo.get('province')}")
             continue
         if city and actual_city and normalize_admin(city) != actual_city:
             rejected.append(f"市不一致:{geo.get('city')}")
             continue
-        if district and normalize_admin(district) != actual_district:
+        if district and actual_district and normalize_admin(district) != actual_district:
             rejected.append(f"区县不一致:{geo.get('district')}")
             continue
-        token = place_name(row)
+        if not expected_adcode or actual_adcode != expected_adcode:
+            rejected.append(f"adcode不一致:{actual_adcode or '空'}")
+            continue
+        tokens = place_tokens(row)
         formatted = clean_text(geo.get("formatted_address"))
-        if token and token not in formatted:
+        if tokens and not any(token in formatted for token in tokens):
             rejected.append("命中地址缺少集市地名")
             continue
         coords = parse_location(geo)
@@ -190,6 +247,7 @@ def validate_market_result(row, payload):
             continue
         return {
             "lat": coords[0], "lng": coords[1], "level": level,
+            "adcode": actual_adcode,
             "formatted_address": geo.get("formatted_address") or "",
         }, ""
     return None, rejected[0] if rejected else "未找到结果"
@@ -238,7 +296,9 @@ def report_is_applied(row, report_row):
 def backup_database(db_path):
     backup_dir = Path(db_path).parent / "backups"
     backup_dir.mkdir(parents=True, exist_ok=True)
-    target = backup_dir / f"zhaojishi_before_geocode_{datetime.now():%Y%m%d_%H%M%S}.db"
+    target = backup_dir / (
+        f"zhaojishi_before_geocode_{datetime.now():%Y%m%d_%H%M%S_%f}.db"
+    )
     source_conn = sqlite3.connect(db_path)
     backup_conn = sqlite3.connect(target)
     try:
@@ -249,46 +309,52 @@ def backup_database(db_path):
     return target
 
 
-def admin_center(row, key, pause, cache):
+def admin_info(row, key, pause, cache):
     province, city, district = expected_admin(row)
     cache_key = "|".join((province, city, district))
-    if cache_key in cache:
+    if cache_key in cache and cache[cache_key] and cache[cache_key].get("adcode"):
         return cache[cache_key]
     query = "".join(part for part in (province, city, district) if part)
     if not district or not query:
-        cache[cache_key] = None
         return None
     try:
         payload = amap_geocode(key, query, city, pause)
     except Exception:
         return None
-    center = None
+    info = None
     if payload.get("status") == "1":
         for geo in payload.get("geocodes") or []:
             coords = parse_location(geo)
-            if coords and normalize_admin(geo.get("district")) == normalize_admin(district):
-                center = {"lat": coords[0], "lng": coords[1]}
+            if (
+                coords
+                and geo.get("adcode")
+                and normalize_admin(geo.get("district")) == normalize_admin(district)
+            ):
+                info = {
+                    "lat": coords[0],
+                    "lng": coords[1],
+                    "adcode": str(geo["adcode"]),
+                }
                 break
-    cache[cache_key] = center
-    return center
+    if info:
+        cache[cache_key] = info
+    return info
 
 
 def candidate_rows(conn, args, key, reports):
-    rows = [dict(row) for row in conn.execute(
-        "SELECT * FROM markets WHERE status='published' ORDER BY region,name"
-    )]
+    rows = [dict(row) for row in conn.execute("SELECT * FROM markets ORDER BY region,name")]
     missing = [row for row in rows if not row["lat"] or not row["lng"]]
-    if args.limit and len(missing) >= args.limit:
-        return missing[:args.limit], {}
-
     center_cache = load_json(DEFAULT_CENTER_CACHE, {})
+    if args.limit and len(missing) >= args.limit:
+        return missing[:args.limit], center_cache
+
     suspicious = []
     for row in rows:
         if not row["lat"] or not row["lng"]:
             continue
         if not args.retry_success and report_is_applied(row, reports.get(row["id"])):
             continue
-        center = admin_center(row, key, args.sleep, center_cache)
+        center = admin_info(row, key, args.sleep, center_cache)
         if not center:
             continue
         distance = haversine_m(float(row["lat"]), float(row["lng"]), center["lat"], center["lng"])
@@ -301,7 +367,10 @@ def candidate_rows(conn, args, key, reports):
     return candidates[:args.limit] if args.limit else candidates, center_cache
 
 
-def geocode_row(row, key, pause):
+def geocode_row(row, key, pause, admin_cache):
+    expected = admin_info(row, key, pause, admin_cache)
+    if not expected:
+        return None, "", "无法确认区县adcode", ""
     last_reason = "未尝试"
     last_level = ""
     last_query = ""
@@ -317,10 +386,15 @@ def geocode_row(row, key, pause):
         if geos:
             saw_result = True
             last_level = geos[0].get("level") or ""
-        result, last_reason = validate_market_result(row, payload)
+        result, last_reason = validate_market_result(row, payload, expected["adcode"])
         if result:
-            return result, query, ""
-    return None, last_query, last_reason if saw_result else last_reason or "未找到结果"
+            return result, query, "", expected["adcode"]
+    return (
+        None,
+        last_query,
+        last_reason if saw_result else last_reason or "未找到结果",
+        expected["adcode"],
+    )
 
 
 def format_coords(lat, lng):
@@ -331,20 +405,24 @@ def format_coords(lat, lng):
 
 def main():
     args = parse_args()
-    key = (args.key or os.environ.get("AMAP_WS_KEY", "")).strip()
-    if not key:
-        raise SystemExit("缺少高德 Web 服务 Key，请设置 AMAP_WS_KEY")
-
     conn = sqlite3.connect(args.db, timeout=30)
     conn.row_factory = sqlite3.Row
+    key = load_key(conn, args.key)
+    if not key:
+        conn.close()
+        raise SystemExit(
+            "缺少高德 Web 服务 Key，请设置 app_settings.amap_ws_key 或 AMAP_WS_KEY"
+        )
     reports = load_report(args.report)
-    rows, _ = candidate_rows(conn, args, key, reports)
+    rows, admin_cache = candidate_rows(conn, args, key, reports)
     backup = None if args.dry_run or not rows else backup_database(args.db)
     succeeded = failed = doubtful = 0
     levels = Counter()
 
     for index, row in enumerate(rows, 1):
-        result, query, reason = geocode_row(row, key, args.sleep)
+        result, query, reason, expected_adcode = geocode_row(
+            row, key, args.sleep, admin_cache
+        )
         old_coords = format_coords(row["lat"], row["lng"])
         if result:
             offset = ""
@@ -356,7 +434,9 @@ def main():
                     (result["lat"], result["lng"], row["id"]),
                 )
             reports[row["id"]] = {
-                "id": row["id"], "name": row["name"], "查询词": query,
+                "id": row["id"], "name": row["name"], "region": row["region"],
+                "查询词": query, "期望adcode": expected_adcode,
+                "命中adcode": result["adcode"],
                 "命中level": result["level"], "旧坐标": old_coords,
                 "新坐标": format_coords(result["lat"], result["lng"]),
                 "偏移距离": offset, "状态": "成功",
@@ -367,8 +447,10 @@ def main():
         else:
             status = "存疑" if old_coords else "失败"
             reports[row["id"]] = {
-                "id": row["id"], "name": row["name"], "查询词": query,
-                "命中level": "", "旧坐标": old_coords, "新坐标": "",
+                "id": row["id"], "name": row["name"], "region": row["region"],
+                "查询词": query, "期望adcode": expected_adcode,
+                "命中adcode": "", "命中level": "",
+                "旧坐标": old_coords, "新坐标": "",
                 "偏移距离": "", "状态": status, "原因": reason,
             }
             doubtful += status == "存疑"
@@ -376,14 +458,16 @@ def main():
         if index % 20 == 0:
             if not args.dry_run:
                 conn.commit()
+            write_json(DEFAULT_CENTER_CACHE, admin_cache)
             write_report(args.report, reports)
             print(json.dumps({"完成": index, "成功": succeeded, "失败": failed, "存疑": doubtful}, ensure_ascii=False), flush=True)
 
     if not args.dry_run:
         conn.commit()
+    write_json(DEFAULT_CENTER_CACHE, admin_cache)
     write_report(args.report, reports)
     remaining = conn.execute(
-        "SELECT COUNT(*) FROM markets WHERE status='published' AND (lat IS NULL OR lng IS NULL OR lat=0 OR lng=0)"
+        "SELECT COUNT(*) FROM markets WHERE lat IS NULL OR lng IS NULL OR lat=0 OR lng=0"
     ).fetchone()[0]
     conn.close()
     total = len(rows)
