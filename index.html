@@ -18950,106 +18950,32 @@ async function submitFeedback() {
 
     pullText.textContent = '刷新中...';
 
-    await _doRefresh();
-
-    indicator.style.transform = 'translateY(-100%)';
-
-    indicator.classList.remove('show', 'loading');
-
-    _pullY = 0;
+    try {
+      await _doRefresh();
+    } finally {
+      indicator.style.transform = 'translateY(-100%)';
+      indicator.classList.remove('show', 'loading');
+      _pullY = 0;
+    }
 
   });
 
 
 
   async function _doRefresh() {
-
-    // 1. 重新加载集市数据
-
-    try {
-
-      let renderedFirstPage = false;
-
-      const list = await fetchAllMarketsFromApi({}, {
-        perPage: 200,
-        onPage: (pageList, all, meta) => {
-          if (!pageList.length) return;
-          MARKETS = all.map(_mapApiMarket);
-          if (!renderedFirstPage || meta.page % 4 === 0 || all.length >= meta.total) {
-            renderedFirstPage = true;
-            if (typeof renderMarkets === 'function') renderMarkets();
-          }
-        }
-      });
-
-      if (list.length) {
-
-        MARKETS = list.map(_mapApiMarket);
-
-        if (typeof renderMarkets === 'function') renderMarkets();
-
+    const refreshNearby = async () => {
+      if (hasLocation && isValidPosition(userLat, userLng)) {
+        await loadHomeNearby(userLat, userLng);
+      } else if (selectedRegion !== '全部地区') {
+        renderHomeNearbyForRegion();
       }
-
-    } catch(e) {}
-
-
-
-    // 2. 刷新位置（下拉是用户主动操作，浏览器允许弹授权）
-
-    await new Promise(resolve => {
-
-      if (window.AMap) {
-
-        AMap.plugin('AMap.Geolocation', () => {
-
-          const geo = new AMap.Geolocation({ enableHighAccuracy: false, timeout: 8000, noIpLocate: 0, needAddress: true });
-
-          geo.getCurrentPosition((status, result) => {
-
-            if (status === 'complete' && result.position) {
-
-              const addr = result.formattedAddress || result.addressComponent?.district || '当前位置';
-
-              onLocated(result.position.lat, result.position.lng, true, addr);
-
-            } else {
-
-              _tryBrowserLoc(resolve); return;
-
-            }
-
-            resolve();
-
-          });
-
-        });
-
-      } else { _tryBrowserLoc(resolve); }
-
-    });
-
-
-
-    // 坐标补全交给后台脚本；下拉刷新不触发全量 geocoding。
-
-  }
-
-
-
-  function _tryBrowserLoc(resolve) {
-
-    if (!navigator.geolocation) { resolve(); return; }
-
-    navigator.geolocation.getCurrentPosition(
-
-      pos => { onLocated(pos.coords.latitude, pos.coords.longitude, true, '当前位置'); resolve(); },
-
-      ()  => resolve(),
-
-      { timeout: 8000, enableHighAccuracy: false }
-
-    );
-
+    };
+    await Promise.race([
+      refreshNearby(),
+      new Promise(resolve => setTimeout(resolve, 3000))
+    ]);
+    // 定位可能受系统权限或浏览器实现影响，转入后台更新，不再阻塞刷新指示条。
+    if (!isLocating) silentLocate();
   }
 
 })();
