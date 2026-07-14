@@ -8071,6 +8071,10 @@ function switchUserPage(p){
 
   document.body.classList.toggle('account-v2-active',['fav','my'].includes(p));
 
+  const targetPage = document.getElementById('user-page-'+p);
+
+  if (!targetPage) { console.error('[switchUserPage] 找不到页面:', p); return; }
+
   const previewMode = new URLSearchParams(location.search).get('preview');
 
   if (!currentUser && ['publish', 'fav'].includes(p) && !['favorites','my'].includes(previewMode)) {
@@ -8083,7 +8087,10 @@ function switchUserPage(p){
 
   document.querySelectorAll('[id^="user-page-"]').forEach(x=>x.classList.add('hidden'));
 
-  document.getElementById('user-page-'+p).classList.remove('hidden');
+  // 搜索页会给所有内容页写入 display:none；切换 Tab 时必须同时清掉。
+  targetPage.style.removeProperty('display');
+
+  targetPage.classList.remove('hidden');
 
   ['home','nearby','publish','fav','my'].forEach(n=>{const el=document.getElementById('nav-'+n);if(el)el.classList.remove('active');});
 
