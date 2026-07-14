@@ -8123,6 +8123,26 @@ let mapV2Category = '全部';
 let mapV2TodayOnly = false;
 let mapV2Source = [];
 
+function mapV2FiniteNumber(value){
+  if (value === null || value === undefined || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function mapV2PlaceLabel(addrLabel){
+  const value = String(addrLabel || '').trim();
+  const matches = [...value.matchAll(/([^省市区县乡镇街道路·\s]{1,12}(?:区|县|市))/g)];
+  if (matches.length) return matches.at(-1)[1];
+  const selected = String(selectedRegion || '').split('·').map(part => part.trim()).filter(Boolean).at(-1);
+  return selected && selected !== '全部地区' ? selected : '当前位置';
+}
+
+function updateMapV2Place(addrLabel){
+  const label = mapV2PlaceLabel(addrLabel);
+  const element = document.querySelector('.map-v2-filter-place span:first-child');
+  if (element) element.textContent = label;
+}
+
 function closeMapView(){
   document.body.classList.remove('map-v2-active','map-preview');
   switchUserPage('home');
@@ -8137,9 +8157,13 @@ function mapV2CategoryOf(m){
 }
 
 function mapV2NormalizeMarket(m){
-  const distanceMeters = Number.isFinite(Number(m.distanceMeters))
-    ? Number(m.distanceMeters)
-    : Number.isFinite(Number(m.dist)) ? Math.round(Number(m.dist) * 1000) : null;
+  const directDistance = mapV2FiniteNumber(m.distanceMeters ?? m.distance);
+  const distanceKm = mapV2FiniteNumber(m.dist);
+  const distanceMeters = directDistance != null
+    ? Math.round(directDistance)
+    : distanceKm != null ? Math.round(distanceKm * 1000) : null;
+  const lat = mapV2FiniteNumber(m.lat);
+  const lng = mapV2FiniteNumber(m.lng);
   const statusLabel = m.statusLabel || (m.is_open_now ? '营业中' : m.next_open_label) || (mapV2CategoryOf(m)==='夜市' ? '今晚开市' : '即将开集');
   let statusClass = m.statusClass || 'category';
   if (!m.statusClass) {
@@ -8157,7 +8181,7 @@ function mapV2NormalizeMarket(m){
     scheduleText:m.scheduleText || m.homeScheduleText || formatScheduleTag(m.openTime || m.open_time) || m.time || '集期待确认',
     reviewCount:Number(m.reviewCount ?? m.review_count ?? 0),
     rating:m.rating == null ? null : Number(m.rating),
-    lat:Number(m.lat),lng:Number(m.lng)
+    lat,lng
   };
 }
 
@@ -8273,7 +8297,11 @@ function renderMapV2Markers(){
 function initMapV2(){
   const preview = new URLSearchParams(location.search).get('preview');
   const isPreview = ['map-default','map-raised'].includes(preview);
-  mapV2Source = (isPreview ? MAP_V2_PREVIEW_MARKETS : (_nearbyBaseList.length ? _nearbyBaseList : (_HOME_NEARBY_SOURCE.length ? _HOME_NEARBY_SOURCE : MARKETS)))
+  const locatedMarkets = _nearbyBaseList.filter(m => hasMarketCoord(m) && mapV2FiniteNumber(m.dist) != null);
+  const source = isPreview
+    ? MAP_V2_PREVIEW_MARKETS
+    : (_HOME_NEARBY_SOURCE.length ? _HOME_NEARBY_SOURCE : (locatedMarkets.length ? locatedMarkets : MARKETS));
+  mapV2Source = source
     .map(mapV2NormalizeMarket).filter(m => Number.isFinite(m.lat) && Number.isFinite(m.lng)).slice(0,40);
   if (!mapV2Source.length && isPreview) mapV2Source = MAP_V2_PREVIEW_MARKETS.map(mapV2NormalizeMarket);
   renderMapV2List();
@@ -8282,7 +8310,9 @@ function initMapV2(){
     return;
   }
   if (mapV2Instance) mapV2Instance.destroy();
-  mapV2Instance = new AMap.Map('map-v2-canvas',{zoom:13,center:[118.34,35.12],mapStyle:'amap://styles/whitesmoke',viewMode:'2D',showLabel:true});
+  const centerLat = mapV2FiniteNumber(userLat) ?? mapV2Source[0]?.lat ?? 35.12;
+  const centerLng = mapV2FiniteNumber(userLng) ?? mapV2Source[0]?.lng ?? 118.34;
+  mapV2Instance = new AMap.Map('map-v2-canvas',{zoom:13,center:[centerLng,centerLat],mapStyle:'amap://styles/whitesmoke',viewMode:'2D',showLabel:true});
   renderMapV2Markers();
 }
 
@@ -10056,6 +10086,7 @@ function onLocated(lat, lng, real, addrLabel) {
     return last.length > 10 ? last.slice(-10) : last;
   }
   if (nameEl) nameEl.textContent = located ? _shortAddr(addrLabel) : '全部地区';
+  updateMapV2Place(located ? addrLabel : selectedRegion);
 
   if (located) {
     setHomeRuntimeState('list');
