@@ -8525,6 +8525,21 @@ function _homeRatingText(market) {
   return `${rating.toFixed(1)}分 · ${count}条`;
 }
 
+function _homeMarketDisplayName(market) {
+  const name = String(market.name || '集市').trim();
+  const regionParts = String(market.region || '').split('·').map(part => part.trim()).filter(Boolean);
+  const county = regionParts.at(-1) || '';
+  const address = String(market.addr || market.address || '');
+  const townshipMatches = [...address.matchAll(/([^省市区县乡镇街道路·\s]{1,12}(?:镇|乡|街道))/g)];
+  const township = townshipMatches.at(-1)?.[1] || '';
+  const countyBare = county.replace(/[市区县]$/, '');
+  const includesCounty = name.includes(county) || (countyBare.length >= 2 && name.includes(countyBare));
+  const prefix = [];
+  if (county && !includesCounty) prefix.push(county);
+  if (township && !name.includes(township)) prefix.push(township);
+  return prefix.length ? `${prefix.join('·')}·${name}` : name;
+}
+
 function toggleHomeFavorite(index, event) {
   event?.stopPropagation();
   const market = _HOME_NEARBY[index];
@@ -8545,6 +8560,7 @@ function renderHomeNearby(markets, rememberSource=true) {
   }
   listEl.innerHTML = _HOME_NEARBY.map((m, index) => {
     const status = _homeStatusMeta(m);
+    const displayName = _homeMarketDisplayName(m);
     const distance = m.distanceMeters != null
       ? formatDistanceMeters(m.distanceMeters)
       : (m.dist != null ? formatDistanceMeters(Number(m.dist) * 1000) : '');
@@ -8562,7 +8578,7 @@ function renderHomeNearby(markets, rememberSource=true) {
         <span class="material-symbols-outlined" aria-hidden="true">favorite</span><span>${saved ? '已收藏' : '收藏'}</span>
       </button>
       <div class="home-card-title-row">
-        <h3 class="home-card-title">${_homeEscape(m.name)}</h3>
+        <h3 class="home-card-title" title="${_homeEscape(displayName)}">${_homeEscape(displayName)}</h3>
         ${isFeature ? '<span class="home-card-cert">当地特色</span>' : ''}
       </div>
       <div class="home-card-bottom">
