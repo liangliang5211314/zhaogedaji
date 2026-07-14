@@ -57,7 +57,7 @@
 
 ## 页面 QA 档案
 
-- C 端：首页四态 `output/frontend-home/`；地图双态 `output/frontend-map/`；详情两态 `output/frontend-detail/`；地区与弹层 `output/frontend-trigger-sheets/`；收藏/我的 `output/frontend-favorites-my/`；无网络 `output/frontend-feedback/`。
+- C 端：首页四态 `output/frontend-home/`；地图双态 `output/frontend-map/`；生产高德地图两态 `output/production-qa/map-default-live.png`、`map-raised-live.png`；详情两态 `output/frontend-detail/`；地区与弹层 `output/frontend-trigger-sheets/`；收藏/我的 `output/frontend-favorites-my/`；无网络 `output/frontend-feedback/`。
 - 后台：B1/B2/B3 对比图在 `output/admin-b1/`、`output/admin-b2/`、`output/admin-b3/`；其余七页在 `output/admin-pages/`。
 - OCR 名称复核运行态：`output/admin-pages/name-review-1280.png`。
 - 逐页结论与修正历史：`design-qa.md`，当前无遗留 P0/P1/P2。
@@ -90,7 +90,7 @@
 | PWA 静态资源 | 通过 | manifest JSON、10 个 icon、favicon、logo、本地图标字体均 HTTP 200 |
 | 生产数据恢复 | 通过 | 写入型冒烟前备份；清理后 users=2、favorites=0、reviews=0、reminders=0、markets=3030，与测试前完全一致 |
 | 后台 HTML 更新 | 通过 | Nginx 返回 `Cache-Control: no-cache, no-store, must-revalidate` |
-| 真实高德地图 | 待外部配置 | JS API Key 与 securityJsCode 为空，接口 `configured=false` |
+| 真实高德地图 | 通过 | Web 端 JS API 配置已写入生产数据库且不进 Git；`/api/app-config/map` 返回 `configured=true`；线上默认/拖起两态均出现 AutoNavi 底图与版权标识，控制台记录 `[AMap] SDK ready` 且无 error |
 | 手机实机定位/唤起高德 | 待人工实机 | 桌面浏览器不能证明系统定位授权与地图 App 唤起 |
 
 写入型冒烟备份：`/www/wwwroot/zhaogedaji/data/backups/smoke_20260714_024849/zhaojishi.db`。首次脚本因合成 UID 冲突未提交任何写入，随后核验主库与备份均 `integrity_check=ok`；成功轮结束后无合成用户、集市或验证码残留。
@@ -101,8 +101,9 @@
 - 全量数据同步前备份：`/www/wwwroot/zhaogedaji/data/backups/deploy_20260714_022327/zhaojishi.db`。
 - 当前最终代码部署前备份：`/www/wwwroot/zhaogedaji/data/backups/deploy_20260714_025904/zhaojishi.db`。
 - 后台 Nginx 配置备份：`/www/server/panel/vhost/nginx/admin.xingjiawu.cn.conf.bak_20260714_030156`。
+- 高德 Web 端配置写入前数据库备份：`/www/wwwroot/zhaogedaji/data/backups/amap_js_config_20260714_100038/zhaojishi.db`，备份与写入后主库均 `integrity_check=ok`。
 - 回滚时先停止 `zhaojishi`，恢复目标 SQLite 备份并校验 `PRAGMA integrity_check`，再切换到对应 tag、重启服务并执行内外网健康检查；不使用 `git reset --hard` 覆盖未知服务器改动。
 
 ## 待决
 
-详见 `output/questions.md`。只剩高德 JS API 两项凭据/白名单和手机实机验收；它们未通过前不把总目标标记为全部完成。
+详见 `output/questions.md`。高德 Web 端配置与线上地图加载已经通过；只剩真实手机上的定位授权、附近列表、详情与高德 App 唤起验收，完成前不把总目标标记为全部完成。
