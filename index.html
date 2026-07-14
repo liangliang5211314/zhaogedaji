@@ -2750,7 +2750,7 @@ body:not(.account-v2-active) .home-v2-nav .bottom-nav-item.active .material-symb
           <div class="map-v2-searchbar">
             <button class="map-v2-back" type="button" onclick="closeMapView()" aria-label="返回首页"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span></button>
             <button class="map-v2-search-action" type="button" onclick="openSearchPage()"><span class="material-symbols-outlined" aria-hidden="true">search</span><span>搜索集市或地区</span></button>
-            <button class="map-v2-filter-place" type="button" onclick="openLocationModal()"><span>兰山区</span><span class="material-symbols-outlined" aria-hidden="true">expand_more</span></button>
+            <button class="map-v2-filter-place" type="button" onclick="openLocationModal()"><span>选择地区</span><span class="material-symbols-outlined" aria-hidden="true">expand_more</span></button>
           </div>
           <button class="map-v2-locate" type="button" onclick="locateMapV2()" aria-label="回到我的位置"><span class="material-symbols-outlined" aria-hidden="true">my_location</span></button>
           <section class="map-v2-sheet" id="map-v2-sheet" aria-label="附近集市列表">
@@ -7368,6 +7368,7 @@ function _updateCategoryList(cats) {
     selectedRegion = clean.split('·').pop() || clean;
     const display = document.getElementById('loc-name-display');
     if (display) display.textContent = clean.replaceAll('·','');
+    updateMapV2Place(clean);
     localStorage.setItem('zjsSelectedRegion',clean);
     closeRegionSearchV2();
     renderHomeNearbyForRegion();
@@ -8134,7 +8135,8 @@ function mapV2PlaceLabel(addrLabel){
   const matches = [...value.matchAll(/([^省市区县乡镇街道路·\s]{1,12}(?:区|县|市))/g)];
   if (matches.length) return matches.at(-1)[1];
   const selected = String(selectedRegion || '').split('·').map(part => part.trim()).filter(Boolean).at(-1);
-  return selected && selected !== '全部地区' ? selected : '当前位置';
+  if (selected && selected !== '全部地区') return selected;
+  return mapV2FiniteNumber(userLat) != null && mapV2FiniteNumber(userLng) != null ? '当前位置' : '选择地区';
 }
 
 function updateMapV2Place(addrLabel){
@@ -8206,7 +8208,11 @@ function renderMapV2List(){
   const preview = new URLSearchParams(location.search).get('preview');
   if (title) title.textContent = raised ? `${preview ? 18 : markets.length} 个附近集市` : '附近集市';
   if (!markets.length) {
-    list.innerHTML = '<div class="map-v2-empty">当前筛选下暂无集市</div>';
+    const needsLocation = !mapV2Source.length
+      && mapV2FiniteNumber(userLat) == null
+      && mapV2FiniteNumber(userLng) == null
+      && selectedRegion === '全部地区';
+    list.innerHTML = `<div class="map-v2-empty">${needsLocation ? '请先定位或选择地区' : '当前筛选下暂无集市'}</div>`;
     return;
   }
   list.innerHTML = markets.map(m => {
@@ -8298,9 +8304,10 @@ function initMapV2(){
   const preview = new URLSearchParams(location.search).get('preview');
   const isPreview = ['map-default','map-raised'].includes(preview);
   const locatedMarkets = _nearbyBaseList.filter(m => hasMarketCoord(m) && mapV2FiniteNumber(m.dist) != null);
+  const hasRegionContext = selectedRegion !== '全部地区';
   const source = isPreview
     ? MAP_V2_PREVIEW_MARKETS
-    : (_HOME_NEARBY_SOURCE.length ? _HOME_NEARBY_SOURCE : (locatedMarkets.length ? locatedMarkets : MARKETS));
+    : (_HOME_NEARBY_SOURCE.length ? _HOME_NEARBY_SOURCE : (locatedMarkets.length ? locatedMarkets : (hasRegionContext ? MARKETS : [])));
   mapV2Source = source
     .map(mapV2NormalizeMarket).filter(m => Number.isFinite(m.lat) && Number.isFinite(m.lng)).slice(0,40);
   if (!mapV2Source.length && isPreview) mapV2Source = MAP_V2_PREVIEW_MARKETS.map(mapV2NormalizeMarket);
