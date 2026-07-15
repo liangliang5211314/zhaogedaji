@@ -4608,6 +4608,16 @@ function locationPlaceFromRegeocode(regeocode, fallbackLabel='') {
   const neighborhood = normalizeLocationPlace(read(component.neighborhood));
   if (neighborhood) return neighborhood;
 
+  const preferredPoi = (result.pois || [])
+    .filter(poi => {
+      const distance = Number(poi?.distance);
+      return Number.isFinite(distance) && distance <= 500
+        && /住宅区|住宅小区|村庄|乡镇|地名地址信息|风景名胜/.test(String(poi?.type || ''));
+    })
+    .sort((a,b) => Number(a.distance) - Number(b.distance))[0];
+  const preferredPoiName = normalizeLocationPlace(preferredPoi?.name);
+  if (preferredPoiName) return preferredPoiName;
+
   let preciseAddress = String(result.formattedAddress || '').trim();
   [component.province,component.city,component.district,component.township]
     .map(read)
@@ -4615,13 +4625,7 @@ function locationPlaceFromRegeocode(regeocode, fallbackLabel='') {
     .forEach(part => { preciseAddress = preciseAddress.replace(part,''); });
   preciseAddress = normalizeLocationPlace(preciseAddress);
   if (preciseAddress) return preciseAddress;
-
-  const preferredPoi = (result.pois || []).find(poi => {
-    const distance = Number(poi?.distance);
-    return Number.isFinite(distance) && distance <= 500
-      && /住宅区|住宅小区|村庄|乡镇|地名地址信息|风景名胜/.test(String(poi?.type || ''));
-  });
-  return normalizeLocationPlace(preferredPoi?.name);
+  return null;
 }
 
 persistLocationState();
