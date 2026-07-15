@@ -4440,10 +4440,21 @@ function loadLocationState() {
     && cachedAt > 0
     && (Date.now() - cachedAt) < LOCATION_CACHE_TTL_MS;
   const gpsFresh = cacheFresh && gpsUpdatedAt > 0 && (Date.now() - gpsUpdatedAt) < LOCATION_CACHE_TTL_MS;
-  const gpsRegion = gpsFresh ? normalizeLocationRegion(stored?.gpsRegion) : null;
+  const storedGpsRegion = normalizeLocationRegion(stored?.gpsRegion);
+  const gpsRegion = gpsFresh ? storedGpsRegion : null;
   const gpsPlace = gpsFresh ? normalizeLocationPlace(stored?.gpsPlace) : null;
   const manualRegion = normalizeLocationRegion(stored?.manualRegion) || legacyManual;
-  if (!cacheFresh) clearStoredLocationCache();
+  if (!cacheFresh) {
+    clearStoredLocationCache();
+    if (storedGpsRegion && storedGpsRegion !== manualRegion) {
+      try {
+        const recent = JSON.parse(localStorage.getItem(RECENT_REGIONS_KEY) || '[]');
+        if (Array.isArray(recent)) {
+          localStorage.setItem(RECENT_REGIONS_KEY,JSON.stringify(recent.filter(region => normalizeLocationRegion(region) !== storedGpsRegion)));
+        }
+      } catch (error) {}
+    }
+  }
   try { localStorage.removeItem('zjsSelectedRegion'); } catch (error) {}
   return {gpsRegion, gpsPlace, gpsUpdatedAt:gpsFresh ? gpsUpdatedAt : 0, manualRegion, effectiveRegion:manualRegion || gpsRegion || null};
 }
