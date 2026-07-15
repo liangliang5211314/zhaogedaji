@@ -1765,9 +1765,9 @@ def _recommendation_key(item, now):
     else:
         if status in {'today', 'daily'} and kind['night']:
             priority = 0
-        elif status == 'tomorrow' and kind['big']:
-            priority = 1
         elif status in {'today', 'daily'}:
+            priority = 1
+        elif status == 'tomorrow' and kind['big']:
             priority = 2
         elif status == 'tomorrow':
             priority = 3
@@ -1775,7 +1775,8 @@ def _recommendation_key(item, now):
             priority = 4
         else:
             priority = 8
-    return priority, item['distance'], -(item.get('rating') or 0)
+    distance = item.get('distance')
+    return priority, distance if distance is not None else float('inf'), -(item.get('rating') or 0)
 
 
 @app.route('/api/markets/nearby', methods=['GET'])
@@ -1784,15 +1785,21 @@ def nearby_markets():
 
     ``radius`` is expressed in kilometres; each result ``distance`` is metres.
     """
+    region_filter = (request.args.get('region') or '').strip()
+    lat_arg = request.args.get('lat')
+    lng_arg = request.args.get('lng')
     try:
-        lat = float(request.args['lat'])
-        lng = float(request.args['lng'])
+        lat = float(lat_arg) if lat_arg not in {None, ''} else None
+        lng = float(lng_arg) if lng_arg not in {None, ''} else None
         radius_km = float(request.args.get('radius', 50))
         limit = int(request.args.get('limit', 50))
         offset = int(request.args.get('offset', 0))
-    except (KeyError, TypeError, ValueError):
+    except (TypeError, ValueError):
         return jsonify({'code': 400, 'msg': 'lat、lng、radius、limit 或 offset 参数无效'}), 400
-    if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+    if not region_filter and (lat is None or lng is None):
+        return jsonify({'code': 400, 'msg': 'GPS 模式必须提供 lat、lng'}), 400
+    if ((lat is None) != (lng is None)
+            or (lat is not None and not (-90 <= lat <= 90 and -180 <= lng <= 180))):
         return jsonify({'code': 400, 'msg': '坐标超出有效范围'}), 400
     if radius_km <= 0 or limit <= 0 or offset < 0:
         return jsonify({'code': 400, 'msg': 'radius、limit 必须大于 0，offset 不能小于 0'}), 400
@@ -1805,30 +1812,65 @@ def nearby_markets():
     limit = min(limit, 200)
 
     conn = get_db()
-    rows = conn.execute(
-        """SELECT * FROM markets
-           WHERE status='published' AND lat IS NOT NULL AND lng IS NOT NULL
-             AND lat!=0 AND lng!=0"""
-    ).fetchall()
+    sql = "SELECT * FROM markets WHERE status='published'"
+    params = []
+    if region_filter:
+        sql += " AND (region LIKE ? OR address LIKE ?)"
+        pattern = f'%{region_filter}%'
+        params.extend([pattern, pattern])
+    else:
+        sql += " AND lat IS NOT NULL AND lng IS NOT NULL AND lat!=0 AND lng!=0"
+    rows = conn.execute(sql, params).fetchall()
     conn.close()
+
+    coordinate_rows = [
+        row for row in rows
+        if row['lat'] is not None and row['lng'] is not None
+        and float(row['lat']) != 0 and float(row['lng']) != 0
+    ]
+    origin_source = 'request'
+    if region_filter and (lat is None or lng is None):
+        if coordinate_rows:
+            lat = sum(float(row['lat']) for row in coordinate_rows) / len(coordinate_rows)
+            lng = sum(float(row['lng']) for row in coordinate_rows) / len(coordinate_rows)
+            origin_source = 'region_centroid'
+        else:
+            origin_source = 'region_without_coordinates'
+
     items = []
     for row in rows:
-        distance = _haversine_m(lat, lng, float(row['lat']), float(row['lng']))
-        if distance > radius_m:
+        has_coordinates = (
+            row['lat'] is not None and row['lng'] is not None
+            and float(row['lat']) != 0 and float(row['lng']) != 0
+        )
+        distance = (
+            _haversine_m(lat, lng, float(row['lat']), float(row['lng']))
+            if has_coordinates and lat is not None and lng is not None else None
+        )
+        # 手选区县不设距离硬范围；无坐标记录仍进入全量列表，排在有坐标记录之后。
+        if not region_filter and (distance is None or distance > radius_m):
             continue
         item = dict(row)
         if not _matches_primary_category(item, category):
             continue
-        item['distance'] = int(round(distance))
+        item['distance'] = int(round(distance)) if distance is not None else None
         item['tags'] = _parse_tags(item.get('tags'))
         items.append(item)
     items.sort(key=lambda item: (
-        item['distance'],
+        item['distance'] is None,
+        item['distance'] if item['distance'] is not None else float('inf'),
         -(item.get('rating') or 0),
         str(item.get('id') or ''),
     ))
     now = _nearby_now()
     candidates = [_derive_market_schedule(item, now) for item in items]
+    today_total = sum(
+        item.get('schedule_status') in {'today', 'daily'} for item in candidates
+    )
+    tonight_total = sum(
+        item.get('schedule_status') in {'today', 'daily'} and _market_kind(item)['night']
+        for item in candidates
+    )
     if today_only:
         candidates = [
             item for item in candidates
@@ -1853,6 +1895,16 @@ def nearby_markets():
             'matched_total': matched_total,
             'sort': sort_mode,
             'today_only': today_only,
+            'today_total': today_total,
+            'tonight_total': tonight_total,
+            'origin': {
+                'lat': lat,
+                'lng': lng,
+                'source': origin_source,
+                'region': region_filter or None,
+                'coordinate_count': len(coordinate_rows),
+            },
+            'distance_context': 'region_center' if region_filter else 'gps',
         },
         'markets': selected,
         'total': matched_total,

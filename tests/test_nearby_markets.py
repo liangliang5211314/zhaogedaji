@@ -43,13 +43,13 @@ def client(tmp_path, monkeypatch):
     app_module.init_db()
     conn = sqlite3.connect(db_path)
     rows = [
-        ("near", "近处大集", "农村大集", "河北省·保定市·竞秀区", 38.8730, 115.4646, "published"),
-        ("far", "远处大集", "农村大集", "河北省·保定市·满城区", 38.9500, 115.3000, "published"),
-        ("hidden", "未发布大集", "农村大集", "河北省·保定市·竞秀区", 38.8731, 115.4647, "pending"),
-        ("missing", "无坐标大集", "农村大集", "河北省·保定市·竞秀区", None, None, "published"),
+        ("near", "近处大集", "农村大集", "河北省·保定", "河北省保定市竞秀区近处村", 38.8730, 115.4646, "published"),
+        ("far", "远处大集", "农村大集", "河北省·保定", "河北省保定市满城区远处村", 38.9500, 115.3000, "published"),
+        ("hidden", "未发布大集", "农村大集", "河北省·保定", "河北省保定市竞秀区隐藏村", 38.8731, 115.4647, "pending"),
+        ("missing", "无坐标大集", "农村大集", "河北省·保定", "河北省保定市竞秀区无坐标村", None, None, "published"),
     ]
     conn.executemany(
-        "INSERT INTO markets(id,name,category,region,lat,lng,status,open_time) VALUES(?,?,?,?,?,?,?,?)",
+        "INSERT INTO markets(id,name,category,region,address,lat,lng,status,open_time) VALUES(?,?,?,?,?,?,?,?,?)",
         [row + (json.dumps({"type": "lunar", "days": [1, 6]}),) for row in rows],
     )
     conn.commit()
@@ -141,6 +141,38 @@ def test_nearby_rejects_invalid_coordinates_and_excludes_unpublished(client):
     assert "missing" not in ids
 
 
+def test_region_mode_uses_market_centroid_and_keeps_missing_coordinates(client):
+    response = client.get(
+        "/api/markets/nearby?region=竞秀区&limit=20&offset=0&sort=distance"
+    )
+    data = response.get_json()["data"]
+    assert response.status_code == 200
+    assert [item["id"] for item in data["list"]] == ["near", "missing"]
+    assert data["total"] == 2
+    assert data["list"][0]["distance"] == 0
+    assert data["list"][1]["distance"] is None
+    assert data["list"][1]["status_label"] == "集期待核实"
+    assert data["origin"] == {
+        "lat": 38.873,
+        "lng": 115.4646,
+        "source": "region_centroid",
+        "region": "竞秀区",
+        "coordinate_count": 1,
+    }
+    assert data["distance_context"] == "region_center"
+
+
+def test_region_mode_offset_out_of_range_returns_empty_list(client):
+    response = client.get(
+        "/api/markets/nearby?region=竞秀区&limit=20&offset=999"
+    )
+    data = response.get_json()["data"]
+    assert response.status_code == 200
+    assert data["list"] == []
+    assert data["total"] == 2
+    assert data["has_more"] is False
+
+
 def test_afternoon_recommends_night_then_tomorrow_and_sinks_ended(
     recommendation_client, monkeypatch
 ):
@@ -202,6 +234,8 @@ def test_today_only_filters_before_pagination(recommendation_client, monkeypatch
     assert data["total"] == 1
     assert data["has_more"] is False
     assert data["today_only"] is True
+    assert data["today_total"] == 1
+    assert data["tonight_total"] == 1
 
 
 def test_morning_prioritizes_today_market_and_category_filter_overrides_mix(

@@ -1534,7 +1534,7 @@ body.home-preview .app-status-preview{display:flex;}
   scrollbar-width:none;
 }
 #user-screen .user-scroll-body::-webkit-scrollbar{display:none;}
-#user-page-home{min-height:100%;padding:12px 16px 32px;}
+#user-page-home{min-height:100%;padding:12px 16px 96px;}
 
 .home-v2-banner{
   height:66px;
@@ -1895,7 +1895,11 @@ body.home-preview .app-status-preview{display:flex;}
 .home-map-pill{
   width:164px;
   height:42px;
-  margin-top:10px;
+  position:fixed;
+  left:50%;
+  bottom:calc(86px + env(safe-area-inset-bottom, 0px));
+  z-index:180;
+  margin:0;
   padding:0 18px;
   display:flex;
   align-items:center;
@@ -1907,6 +1911,8 @@ body.home-preview .app-status-preview{display:flex;}
   color:#fff;
   font:600 14px/20px 'Noto Sans SC','PingFang SC',sans-serif;
   cursor:pointer;
+  transform:translateX(-50%);
+  box-shadow:0 8px 22px rgba(31,41,35,.22);
 }
 .home-map-pill .material-symbols-outlined{font-size:17px;}
 
@@ -2602,7 +2608,7 @@ body:not(.account-v2-active) .home-v2-nav .bottom-nav-item.active .material-symb
           <div class="home-v2-empty">正在获取附近集市...</div>
         </div>
 
-        <button class="home-map-pill home-v2-default" type="button" onclick="openMapView()">
+        <button class="home-map-pill" type="button" onclick="openMapView()">
           <span class="material-symbols-outlined" aria-hidden="true">my_location</span>
           <span>地图查看</span>
         </button>
@@ -7247,39 +7253,21 @@ function _detectLunarPattern(days) {
 
   if (!days || days.length < 2) return null;
 
-  const sorted = [...days].sort((a,b)=>a-b);
-
-  const gap = sorted[1] - sorted[0];
-
-  if (gap !== 5 && gap !== 10) return null;
-
-  // 验证所有间隔相等
-
-  for (let i = 1; i < sorted.length; i++) {
-
-    if (sorted[i] - sorted[i-1] !== gap) return null;
-
-  }
-
+  const sorted = [...new Set(days.map(Number).filter(d=>d>=1&&d<=30))].sort((a,b)=>a-b);
   const names = {1:'一',2:'二',3:'三',4:'四',5:'五',6:'六',7:'七',8:'八',9:'九',10:'十'};
-
-  if (gap === 5) {
-
-    // 逢x逢y（每月6次），两个基准日
-
-    return `逢${names[sorted[0]]||sorted[0]}、逢${names[sorted[1]]||sorted[1]}`;
-
+  const bases = [...new Set(sorted.map(day => ((day - 1) % 10) + 1))].sort((a,b)=>a-b);
+  if (bases.length > 4) return null;
+  const expanded = bases.flatMap(base => [base,base+10,base+20].filter(day=>day<=30)).sort((a,b)=>a-b);
+  const isExpandedPattern = expanded.length === sorted.length
+    && expanded.every((day,index)=>day === sorted[index]);
+  if (!isExpandedPattern) {
+    // 兼容尚未迁移的旧“逢一逢六”短数组；v2 仍以展开后的完整 days 入库。
+    if (sorted.length === 2 && sorted[1]-sorted[0] === 5) {
+      return sorted.map(day=>`逢${names[day]||day}`).join('、');
+    }
+    return null;
   }
-
-  if (gap === 10) {
-
-    // 逢x（每旬）
-
-    return `逢${names[sorted[0]]||sorted[0]}`;
-
-  }
-
-  return null;
+  return bases.map(day=>`逢${names[day]||day}`).join('、');
 
 }
 
@@ -8362,7 +8350,9 @@ const nearbyPagingObservers = {home:null,map:null};
 
 function createNearbyPagingState(surface){
   return {
-    surface, active:false, lat:null, lng:null, category:'全部', todayOnly:false,
+    surface, active:false, lat:null, lng:null, region:null, category:'全部', todayOnly:false,
+    sort:surface === 'home' ? 'recommended' : 'distance', distanceContext:'gps',
+    todayTotal:0, tonightTotal:0,
     items:[], ids:new Set(), offset:0, total:0, hasMore:false,
     loading:false, error:false, version:0
   };
@@ -8383,7 +8373,8 @@ function nearbyPagingFooterHtml(surface){
   if (state.error) return `<div class="nearby-load-footer"><button class="nearby-load-error" type="button" onclick="retryNearbyPage('${surface}')">加载失败，点击重试</button></div>`;
   if (state.hasMore) return `<div class="nearby-load-sentinel" id="${surface}-nearby-sentinel" aria-hidden="true"></div>`;
   const total = surface === 'map' && state.todayOnly ? mapV2Filtered().length : state.total;
-  return `<div class="nearby-load-footer nearby-load-done">已看完附近 ${Math.max(0,total)} 个集市</div>`;
+  const scope = state.region ? `${_homeEscape(state.region)} ` : '附近 ';
+  return `<div class="nearby-load-footer nearby-load-done">已看完${scope}${Math.max(0,total)} 个集市</div>`;
 }
 
 function disconnectNearbyObserver(surface){
@@ -8417,9 +8408,12 @@ function renderNearbyPagingSurface(surface){
     setHomeRuntimeState('list');
     renderHomeNearby(state.items, true, nearbyPagingFooterHtml('home'));
   } else {
-    mapV2Source = state.items.map(mapV2NormalizeMarket).filter(m=>Number.isFinite(m.lat) && Number.isFinite(m.lng));
+    mapV2Source = state.items.map(mapV2NormalizeMarket);
     renderMapV2List();
     renderMapV2Markers();
+    if (state.region && mapV2Instance && isValidPosition(state.lat,state.lng)) {
+      mapV2Instance.setCenter([Number(state.lng),Number(state.lat)]);
+    }
   }
   if (surface === 'home') observeNearbySentinel('home');
 }
@@ -8428,10 +8422,15 @@ function resetNearbyPaging(surface, options={}){
   const state = nearbyPaging[surface];
   state.version += 1;
   state.active = true;
-  state.lat = Number(options.lat ?? userLat);
-  state.lng = Number(options.lng ?? userLng);
+  state.region = String(options.region || '').trim() || null;
+  state.lat = state.region ? null : Number(options.lat ?? userLat);
+  state.lng = state.region ? null : Number(options.lng ?? userLng);
   state.category = options.category ?? state.category ?? '全部';
   state.todayOnly = !!(options.todayOnly ?? state.todayOnly);
+  state.sort = options.sort || (surface === 'home' ? 'recommended' : 'distance');
+  state.distanceContext = state.region ? 'region_center' : 'gps';
+  state.todayTotal = 0;
+  state.tonightTotal = 0;
   state.items = [];
   state.ids = new Set();
   state.offset = 0;
@@ -8448,7 +8447,7 @@ function resetNearbyPaging(surface, options={}){
 async function loadNearbyPage(surface){
   const state = nearbyPaging[surface];
   if (!state?.active || state.loading || !state.hasMore) return;
-  if (!isValidPosition(state.lat,state.lng)) {
+  if (!state.region && !isValidPosition(state.lat,state.lng)) {
     state.hasMore = false;
     state.error = true;
     renderNearbyPagingSurface(surface);
@@ -8461,9 +8460,14 @@ async function loadNearbyPage(surface){
   renderNearbyPagingSurface(surface);
   try {
     const params = new URLSearchParams({
-      lat:state.lat, lng:state.lng, radius:100,
-      limit:NEARBY_PAGE_SIZE, offset:pageOffset, sort:'distance'
+      limit:NEARBY_PAGE_SIZE, offset:pageOffset, sort:state.sort
     });
+    if (state.region) params.set('region',state.region);
+    else {
+      params.set('lat',state.lat);
+      params.set('lng',state.lng);
+      params.set('radius','100');
+    }
     if (state.category && state.category !== '全部') params.set('category',state.category);
     if (state.todayOnly) params.set('today_only','1');
     const response = await fetch('/api/markets/nearby?' + params.toString());
@@ -8482,9 +8486,17 @@ async function loadNearbyPage(surface){
     state.offset = pageOffset + raw.length;
     state.total = Number(payload.data?.total ?? payload.total ?? state.items.length);
     state.hasMore = Boolean(payload.data?.has_more ?? payload.has_more);
+    state.todayTotal = Number(payload.data?.today_total ?? state.todayTotal);
+    state.tonightTotal = Number(payload.data?.tonight_total ?? state.tonightTotal);
+    state.distanceContext = payload.data?.distance_context || state.distanceContext;
+    const origin = payload.data?.origin;
+    if (origin && isValidPosition(origin.lat,origin.lng)) {
+      state.lat = Number(origin.lat);
+      state.lng = Number(origin.lng);
+    }
     state.loading = false;
     if (!state.hasMore && state.items.length !== state.total && !showMarketSection) state.total = state.items.length;
-    if (surface === 'home' && pageOffset === 0) updateHomeRecommendationCopy(state.items);
+    if (surface === 'home' && pageOffset === 0) updateHomeRecommendationCopy(state);
     renderNearbyPagingSurface(surface);
   } catch(error) {
     if (version !== state.version) return;
@@ -8503,12 +8515,12 @@ function retryNearbyPage(surface){
   loadNearbyPage(surface);
 }
 
-function nearbyPagingContextMatches(surface, lat, lng, category){
+function nearbyPagingContextMatches(surface, lat, lng, category, region=null){
   const state = nearbyPaging[surface];
-  return state.active
-    && Math.abs(Number(state.lat)-Number(lat)) < 0.000001
-    && Math.abs(Number(state.lng)-Number(lng)) < 0.000001
-    && state.category === category;
+  if (!state.active || state.category !== category || (state.region || null) !== (region || null)) return false;
+  if (region) return true;
+  return Math.abs(Number(state.lat)-Number(lat)) < 0.000001
+    && Math.abs(Number(state.lng)-Number(lng)) < 0.000001;
 }
 
 function mapV2FiniteNumber(value){
@@ -8638,8 +8650,12 @@ function selectMapV2Category(button, category){
   mapV2Category = category;
   document.querySelectorAll('.map-v2-chip').forEach(chip => chip.classList.toggle('active', chip === button));
   const preview = new URLSearchParams(location.search).get('preview');
-  if (!['map-default','map-raised'].includes(preview) && !hasManualRegion() && isValidPosition(userLat,userLng)) {
-    resetNearbyPaging('map',{lat:userLat,lng:userLng,category,todayOnly:mapV2TodayOnly});
+  if (!['map-default','map-raised'].includes(preview) && hasManualRegion() && selectedRegion !== '全部地区') {
+    resetNearbyPaging('map',{region:selectedRegion,category,todayOnly:mapV2TodayOnly,sort:'distance'});
+    return;
+  }
+  if (!['map-default','map-raised'].includes(preview) && isValidPosition(userLat,userLng)) {
+    resetNearbyPaging('map',{lat:userLat,lng:userLng,region:null,category,todayOnly:mapV2TodayOnly,sort:'distance'});
     return;
   }
   renderMapV2List();
@@ -8649,8 +8665,12 @@ function selectMapV2Category(button, category){
 function filterMapV2Today(checked){
   mapV2TodayOnly = !!checked;
   const preview = new URLSearchParams(location.search).get('preview');
-  if (!['map-default','map-raised'].includes(preview) && !hasManualRegion() && isValidPosition(userLat,userLng)) {
-    resetNearbyPaging('map',{lat:userLat,lng:userLng,category:mapV2Category,todayOnly:mapV2TodayOnly});
+  if (!['map-default','map-raised'].includes(preview) && hasManualRegion() && selectedRegion !== '全部地区') {
+    resetNearbyPaging('map',{region:selectedRegion,category:mapV2Category,todayOnly:mapV2TodayOnly,sort:'distance'});
+    return;
+  }
+  if (!['map-default','map-raised'].includes(preview) && isValidPosition(userLat,userLng)) {
+    resetNearbyPaging('map',{lat:userLat,lng:userLng,region:null,category:mapV2Category,todayOnly:mapV2TodayOnly,sort:'distance'});
     return;
   }
   renderMapV2List();
@@ -8658,8 +8678,11 @@ function filterMapV2Today(checked){
 }
 
 function locateMapV2(){
-  if (mapV2Instance && Number.isFinite(Number(userLat)) && Number.isFinite(Number(userLng))) {
-    mapV2Instance.setZoomAndCenter(14,[Number(userLng),Number(userLat)]);
+  const state = nearbyPaging.map;
+  const lat = state.region ? state.lat : userLat;
+  const lng = state.region ? state.lng : userLng;
+  if (mapV2Instance && isValidPosition(lat,lng)) {
+    mapV2Instance.setZoomAndCenter(14,[Number(lng),Number(lat)]);
     return;
   }
   if (mapV2Instance) mapV2Instance.setZoomAndCenter(13,[118.34,35.12]);
@@ -8683,11 +8706,11 @@ function renderMapV2Markers(){
     mapV2Instance.add(marker);
     mapV2Markers.push(marker);
   });
-  const lat = Number.isFinite(Number(userLat)) ? Number(userLat) : 35.12;
-  const lng = Number.isFinite(Number(userLng)) ? Number(userLng) : 118.34;
-  const userMarker = new AMap.Marker({position:[lng,lat],content:'<div class="map-v2-user-dot" aria-label="我的位置"></div>',offset:new AMap.Pixel(-14,-14),zIndex:30});
-  mapV2Instance.add(userMarker);
-  mapV2Markers.push(userMarker);
+  if (!nearbyPaging.map.region && isValidPosition(userLat,userLng)) {
+    const userMarker = new AMap.Marker({position:[Number(userLng),Number(userLat)],content:'<div class="map-v2-user-dot" aria-label="我的位置"></div>',offset:new AMap.Pixel(-14,-14),zIndex:30});
+    mapV2Instance.add(userMarker);
+    mapV2Markers.push(userMarker);
+  }
 }
 
 function initMapV2(){
@@ -8699,20 +8722,23 @@ function initMapV2(){
     nearbyPaging.map.active = false;
     disconnectNearbyObserver('map');
     mapV2Source = MAP_V2_PREVIEW_MARKETS.map(mapV2NormalizeMarket);
-  } else if (!hasManualRegion() && isValidPosition(userLat,userLng)) {
-    if (!nearbyPagingContextMatches('map',userLat,userLng,mapV2Category)) {
-      resetNearbyPaging('map',{lat:userLat,lng:userLng,category:mapV2Category,todayOnly:mapV2TodayOnly});
+  } else if (hasManualRegion() && selectedRegion !== '全部地区') {
+    if (!nearbyPagingContextMatches('map',null,null,mapV2Category,selectedRegion)) {
+      resetNearbyPaging('map',{region:selectedRegion,category:mapV2Category,todayOnly:mapV2TodayOnly,sort:'distance'});
     }
-    mapV2Source = nearbyPaging.map.items.map(mapV2NormalizeMarket)
-      .filter(m=>Number.isFinite(m.lat) && Number.isFinite(m.lng));
+    mapV2Source = nearbyPaging.map.items.map(mapV2NormalizeMarket);
+  } else if (isValidPosition(userLat,userLng)) {
+    if (!nearbyPagingContextMatches('map',userLat,userLng,mapV2Category,null)) {
+      resetNearbyPaging('map',{lat:userLat,lng:userLng,region:null,category:mapV2Category,todayOnly:mapV2TodayOnly,sort:'distance'});
+    }
+    mapV2Source = nearbyPaging.map.items.map(mapV2NormalizeMarket);
   } else {
     nearbyPaging.map.active = false;
     disconnectNearbyObserver('map');
     const source = _HOME_NEARBY_SOURCE.length
       ? _HOME_NEARBY_SOURCE
       : (locatedMarkets.length ? locatedMarkets : (hasRegionContext ? MARKETS : []));
-    mapV2Source = source.map(mapV2NormalizeMarket)
-      .filter(m=>Number.isFinite(m.lat) && Number.isFinite(m.lng)).slice(0,NEARBY_PAGE_SIZE);
+    mapV2Source = source.map(mapV2NormalizeMarket).slice(0,NEARBY_PAGE_SIZE);
   }
   if (!mapV2Source.length && isPreview) mapV2Source = MAP_V2_PREVIEW_MARKETS.map(mapV2NormalizeMarket);
   renderMapV2List();
@@ -8721,8 +8747,8 @@ function initMapV2(){
     return;
   }
   if (mapV2Instance) mapV2Instance.destroy();
-  const centerLat = (hasManualRegion() ? mapV2Source[0]?.lat : mapV2FiniteNumber(userLat)) ?? mapV2Source[0]?.lat ?? 35.12;
-  const centerLng = (hasManualRegion() ? mapV2Source[0]?.lng : mapV2FiniteNumber(userLng)) ?? mapV2Source[0]?.lng ?? 118.34;
+  const centerLat = (hasManualRegion() ? mapV2FiniteNumber(nearbyPaging.map.lat) : mapV2FiniteNumber(userLat)) ?? mapV2Source.find(m=>Number.isFinite(m.lat))?.lat ?? 35.12;
+  const centerLng = (hasManualRegion() ? mapV2FiniteNumber(nearbyPaging.map.lng) : mapV2FiniteNumber(userLng)) ?? mapV2Source.find(m=>Number.isFinite(m.lng))?.lng ?? 118.34;
   mapV2Instance = new AMap.Map('map-v2-canvas',{zoom:13,center:[centerLng,centerLat],mapStyle:'amap://styles/whitesmoke',viewMode:'2D',showLabel:true});
   renderMapV2Markers();
 }
@@ -8907,6 +8933,8 @@ function _homeStatusMeta(market) {
   if (label === '每日营业' || status === 'daily') {
     return {label:market.isOpenNow ? '营业中' : '每日营业', cls:'daily'};
   }
+  if (label === '集期待核实' || status === 'needs_review') return {label:'集期待核实', cls:'category'};
+  if (label === '暂无近期集期' || status === 'none') return {label:'暂无近期集期', cls:'category'};
   const tags = Array.isArray(market.tags) ? market.tags : [];
   if (tags.some(tag => ['当地特色','特色认证'].includes(tag))) return {label:'当地特色', cls:'feature'};
   return {label:_homePrimaryCategory(market), cls:'category'};
@@ -8967,9 +8995,12 @@ function renderHomeNearby(markets, rememberSource=true, footerHtml='') {
   listEl.innerHTML = _HOME_NEARBY.map((m, index) => {
     const status = _homeStatusMeta(m);
     const displayName = _homeMarketDisplayName(m);
-    const distance = m.distanceMeters != null
+    const rawDistance = m.distanceMeters != null
       ? formatDistanceMeters(m.distanceMeters)
       : (m.dist != null ? formatDistanceMeters(Number(m.dist) * 1000) : '');
+    const distance = nearbyPaging.home.active && nearbyPaging.home.distanceContext === 'region_center'
+      ? (rawDistance ? `距区县中心 ${rawDistance}` : '距离待补充')
+      : rawDistance;
     const ratingText = _homeRatingText(m);
     const tags = Array.isArray(m.tags) ? m.tags : [];
     const isFeature = !!m.homeFeature || tags.some(tag => ['当地特色','特色认证'].includes(tag));
@@ -8996,33 +9027,28 @@ function renderHomeNearby(markets, rememberSource=true, footerHtml='') {
 }
 
 function renderHomeNearbyForRegion() {
-  nearbyPaging.home.active = false;
-  disconnectNearbyObserver('home');
   if (selectedRegion === '全部地区') {
+    nearbyPaging.home.active = false;
+    disconnectNearbyObserver('home');
     setHomeRuntimeState('location-failed', {locationName:'定位失败 · 选择地区'});
-    return;
-  }
-  const filtered = MARKETS.filter(m =>
-    (!MARKET_CATS_SET.has(m.cat) || showMarketSection)
-    && (m.region || '').includes(selectedRegion)
-  );
-  if (!filtered.length) {
-    setHomeRuntimeState('empty', {locationName:selectedRegion});
-    return;
+    return Promise.resolve();
   }
   setHomeRuntimeState('list', {locationName:selectedRegion});
-  const visible = filtered.slice(0,NEARBY_PAGE_SIZE);
-  const footer = `<div class="nearby-load-footer nearby-load-done">已显示该地区前 ${visible.length} 个集市</div>`;
-  renderHomeNearby(visible,true,footer);
+  return resetNearbyPaging('home',{
+    region:selectedRegion,
+    category:nearbyPaging.home.category,
+    todayOnly:false,
+    sort:'recommended'
+  });
 }
 
 async function loadHomeNearby(lat, lng) {
   return resetNearbyPaging('home',{
-    lat,lng,category:nearbyPaging.home.category,todayOnly:false
+    lat,lng,region:null,category:nearbyPaging.home.category,todayOnly:false,sort:'recommended'
   });
 }
 
-function updateHomeRecommendationCopy(markets) {
+function updateHomeRecommendationCopy(stateOrMarkets) {
   const title = document.getElementById('home-banner-title');
   const sub = document.getElementById('home-banner-sub');
   const note = document.getElementById('home-recommendation-note');
@@ -9030,9 +9056,10 @@ function updateHomeRecommendationCopy(markets) {
   const banner = document.querySelector('.home-v2-banner');
   if (!title || !sub || !note || !sectionTitle || !banner) return;
   const hour = new Date().getHours();
-  const list = markets || [];
+  const state = Array.isArray(stateOrMarkets) ? null : stateOrMarkets;
+  const list = Array.isArray(stateOrMarkets) ? stateOrMarkets : (stateOrMarkets?.items || []);
   if (hour < 12) {
-    const count = list.filter(m => ['today','daily'].includes(m.scheduleStatus)).length;
+    const count = state ? state.todayTotal : list.filter(m => ['today','daily'].includes(m.scheduleStatus)).length;
     title.textContent = `早上好，今天附近有 ${count} 个集`;
     sub.textContent = '优先显示中午前还能赶上的集市';
     note.textContent = '当前为上午推荐';
@@ -9040,7 +9067,7 @@ function updateHomeRecommendationCopy(markets) {
     banner.classList.remove('afternoon');
     return;
   }
-  const count = list.filter(m =>
+  const count = state ? state.tonightTotal : list.filter(m =>
     _homePrimaryCategory(m) === '夜市' && ['today','daily'].includes(m.scheduleStatus)
   ).length;
   title.textContent = `下午好，今晚附近有 ${count} 个夜市`;
@@ -9053,14 +9080,10 @@ function updateHomeRecommendationCopy(markets) {
 function selectHomeCategory(button, category) {
   document.querySelectorAll('.home-v2-chip').forEach(chip => chip.classList.toggle('active', chip === button));
   nearbyPaging.home.category = category;
-  if (!hasManualRegion() && isValidPosition(userLat,userLng)) {
-    resetNearbyPaging('home',{lat:userLat,lng:userLng,category,todayOnly:false});
-  } else {
-    const source = MARKETS.filter(m=>(m.region || '').includes(selectedRegion));
-    const filtered = category === '全部' ? source : source.filter(m=>_homePrimaryCategory(m) === category);
-    renderHomeNearby(filtered.slice(0,NEARBY_PAGE_SIZE),false,
-      `<div class="nearby-load-footer nearby-load-done">已显示该地区前 ${Math.min(filtered.length,NEARBY_PAGE_SIZE)} 个集市</div>`);
-    document.getElementById('main-scroll')?.scrollTo({top:0,behavior:'auto'});
+  if (hasManualRegion() && selectedRegion !== '全部地区') {
+    resetNearbyPaging('home',{region:selectedRegion,category,todayOnly:false,sort:'recommended'});
+  } else if (isValidPosition(userLat,userLng)) {
+    resetNearbyPaging('home',{lat:userLat,lng:userLng,region:null,category,todayOnly:false,sort:'recommended'});
   }
   showToast(category === '全部' ? '已显示全部集市' : `已筛选：${category}`);
 }
@@ -9134,12 +9157,25 @@ function quickChipSelect(el,filter){
 }
 
 // ── 今日开集横幅点击 ─────────────────────────────
-function _filterTodayOpen(){
+async function _filterTodayOpen(){
   if (document.getElementById('home-category-chips')) {
-    const today = _HOME_NEARBY_SOURCE.filter(m => ['today','daily'].includes(m.scheduleStatus));
     document.querySelectorAll('.home-v2-chip').forEach(chip => chip.classList.remove('active'));
-    renderHomeNearby(today, false);
-    showToast(today.length ? `已显示今天可赶的 ${today.length} 个集市` : '附近今天暂无可赶的集市');
+    const state = nearbyPaging.home;
+    if (state.active) {
+      await resetNearbyPaging('home',{
+        region:state.region,
+        lat:state.lat,
+        lng:state.lng,
+        category:state.category,
+        todayOnly:true,
+        sort:'recommended'
+      });
+      showToast(state.total ? `已显示今天可赶的 ${state.total} 个集市` : '附近今天暂无可赶的集市');
+    } else {
+      const today = _HOME_NEARBY_SOURCE.filter(m => ['today','daily'].includes(m.scheduleStatus));
+      renderHomeNearby(today, false);
+      showToast(today.length ? `已显示今天可赶的 ${today.length} 个集市` : '附近今天暂无可赶的集市');
+    }
     return;
   }
   document.querySelectorAll('.quick-chip').forEach(c=>{
@@ -10738,7 +10774,7 @@ function onLocated(lat, lng, real, addrLabel, addressComponent=null, placeLabel=
       loadHomeNearby(userLat, userLng);
       if (document.body.classList.contains('map-v2-active')) {
         resetNearbyPaging('map',{
-          lat:userLat,lng:userLng,category:mapV2Category,todayOnly:mapV2TodayOnly
+          lat:userLat,lng:userLng,region:null,category:mapV2Category,todayOnly:mapV2TodayOnly,sort:'distance'
         });
       }
       if (resolvedGpsRegion && resolvedGpsRegion !== previousGpsRegion) {
@@ -19634,9 +19670,18 @@ async function submitFeedback() {
     // 先发起新一轮定位；当前坐标立即重拉第一页，新坐标返回后会再次校准。
     if (!isLocating) silentLocate();
     const refreshNearby = () => {
+      if (hasManualRegion() && selectedRegion !== '全部地区') {
+        return resetNearbyPaging(surface,{
+          region:selectedRegion,
+          category:state.category,
+          todayOnly:state.todayOnly,
+          sort:surface === 'home' ? 'recommended' : 'distance'
+        });
+      }
       if (hasLocation && isValidPosition(userLat, userLng)) {
         return resetNearbyPaging(surface,{
-          lat:userLat,lng:userLng,category:state.category,todayOnly:state.todayOnly
+          lat:userLat,lng:userLng,region:null,category:state.category,todayOnly:state.todayOnly,
+          sort:surface === 'home' ? 'recommended' : 'distance'
         });
       }
       if (surface === 'home' && selectedRegion !== '全部地区') renderHomeNearbyForRegion();
