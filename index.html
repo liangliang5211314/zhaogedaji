@@ -4410,20 +4410,42 @@ let selectedRegion = '全部地区';
 
 const LOCATION_STATE_KEY = 'zjsLocationState';
 const RECENT_REGIONS_KEY = 'zjsRecentRegions';
+const LOCATION_CACHE_VERSION = '2';
+const LOCATION_CACHE_TTL_MS = 30 * 60 * 1000;
 
 function normalizeLocationRegion(value) {
   const parts = String(value || '').split('·').map(part => part.trim()).filter(Boolean);
   return parts.length ? parts.join('·') : null;
 }
 
+function normalizeLocationPlace(value) {
+  const place = String(value || '').trim().replace(/^[·\s]+|[·\s]+$/g,'');
+  if (!place || /当前位置$/.test(place) || ['高德定位成功','浏览器定位','上次位置','已定位'].includes(place)) return null;
+  return place;
+}
+
+function clearStoredLocationCache() {
+  try {
+    ['_locLat','_locLng','_locAt','_locAddr','_locPlace','_locVersion'].forEach(key => localStorage.removeItem(key));
+  } catch (error) {}
+}
+
 function loadLocationState() {
   let stored = null;
   try { stored = JSON.parse(localStorage.getItem(LOCATION_STATE_KEY) || 'null'); } catch (error) {}
   const legacyManual = normalizeLocationRegion(localStorage.getItem('zjsSelectedRegion'));
-  const gpsRegion = normalizeLocationRegion(stored?.gpsRegion);
+  const gpsUpdatedAt = Number(stored?.gpsUpdatedAt) || 0;
+  const cachedAt = Number(localStorage.getItem('_locAt')) || 0;
+  const cacheFresh = localStorage.getItem('_locVersion') === LOCATION_CACHE_VERSION
+    && cachedAt > 0
+    && (Date.now() - cachedAt) < LOCATION_CACHE_TTL_MS;
+  const gpsFresh = cacheFresh && gpsUpdatedAt > 0 && (Date.now() - gpsUpdatedAt) < LOCATION_CACHE_TTL_MS;
+  const gpsRegion = gpsFresh ? normalizeLocationRegion(stored?.gpsRegion) : null;
+  const gpsPlace = gpsFresh ? normalizeLocationPlace(stored?.gpsPlace) : null;
   const manualRegion = normalizeLocationRegion(stored?.manualRegion) || legacyManual;
+  if (!cacheFresh) clearStoredLocationCache();
   try { localStorage.removeItem('zjsSelectedRegion'); } catch (error) {}
-  return {gpsRegion, manualRegion, effectiveRegion:manualRegion || gpsRegion || null};
+  return {gpsRegion, gpsPlace, gpsUpdatedAt:gpsFresh ? gpsUpdatedAt : 0, manualRegion, effectiveRegion:manualRegion || gpsRegion || null};
 }
 
 function loadRecentRegions() {
@@ -4441,11 +4463,26 @@ function displayLocationRegion(region) {
   return normalizeLocationRegion(region)?.replaceAll('·',' · ') || '';
 }
 
+function compactLocationLabel() {
+  const region = displayLocationRegion(locationState.effectiveRegion);
+  if (locationState.manualRegion) return region;
+  return locationState.gpsPlace || region;
+}
+
+function detailedLocationLabel() {
+  const region = displayLocationRegion(locationState.effectiveRegion);
+  const compact = compactLocationLabel();
+  if (!compact || compact === region || locationState.manualRegion) return compact || region;
+  return `${compact} · ${region}`;
+}
+
 function persistLocationState() {
   locationState.effectiveRegion = locationState.manualRegion || locationState.gpsRegion || null;
   try {
     localStorage.setItem(LOCATION_STATE_KEY, JSON.stringify({
       gpsRegion:locationState.gpsRegion,
+      gpsPlace:locationState.gpsPlace,
+      gpsUpdatedAt:locationState.gpsUpdatedAt,
       manualRegion:locationState.manualRegion,
       effectiveRegion:locationState.effectiveRegion
     }));
@@ -4479,15 +4516,20 @@ function escapeLocationHtml(value) {
 function renderLocationState() {
   locationState.effectiveRegion = locationState.manualRegion || locationState.gpsRegion || null;
   const region = displayLocationRegion(locationState.effectiveRegion);
+  const compact = compactLocationLabel();
+  const detailed = detailedLocationLabel();
   selectedRegion = locationState.effectiveRegion?.split('·').at(-1) || '全部地区';
   const homeLabel = document.getElementById('loc-name-display');
   const mapLabel = document.querySelector('.map-v2-filter-place span:first-child');
   const searchLabel = document.getElementById('region-v2-current-name');
   const myLabel = document.getElementById('my-v2-region-label');
-  if (homeLabel && !document.body.classList.contains('home-preview')) homeLabel.textContent = region || '未定位';
-  if (mapLabel) mapLabel.textContent = region || '选择地区';
-  if (searchLabel) searchLabel.textContent = region || '未定位';
-  if (myLabel) myLabel.textContent = region || '未定位 · 点击选择';
+  if (homeLabel && !document.body.classList.contains('home-preview')) homeLabel.textContent = compact || '未定位';
+  if (mapLabel) mapLabel.textContent = compact || '选择地区';
+  if (searchLabel) searchLabel.textContent = detailed || '未定位';
+  if (myLabel) myLabel.textContent = detailed || '未定位 · 点击选择';
+  [homeLabel,mapLabel,searchLabel,myLabel].forEach(element => {
+    if (element) element.title = detailed || '';
+  });
   renderRecentRegions();
 }
 
@@ -4499,8 +4541,14 @@ function addRecentRegion(region) {
   renderRecentRegions();
 }
 
-function setGpsRegion(region) {
+function setGpsRegion(region, placeLabel=undefined, options={}) {
+  const previousRegion = locationState.gpsRegion;
   locationState.gpsRegion = normalizeLocationRegion(region);
+  if (placeLabel !== undefined) locationState.gpsPlace = normalizeLocationPlace(placeLabel);
+  else if (previousRegion !== locationState.gpsRegion) locationState.gpsPlace = null;
+  locationState.gpsUpdatedAt = locationState.gpsRegion
+    ? (options.cacheRestore ? (locationState.gpsUpdatedAt || Number(options.cachedAt) || 0) : Date.now())
+    : 0;
   persistLocationState();
   if (locationState.gpsRegion) addRecentRegion(locationState.gpsRegion);
   renderLocationState();
@@ -4532,6 +4580,29 @@ function locationRegionFromAddress(addressComponent, fallbackLabel='') {
   const fallbackDistrict = compact.match(/([^省市区县乡镇街道路]{1,12}(?:区|县))/)?.[1] || '';
   if (fallbackCity && fallbackDistrict) return normalizeLocationRegion(`${fallbackCity}·${fallbackDistrict}`);
   return normalizeLocationRegion(fallbackCity || fallbackDistrict);
+}
+
+function locationPlaceFromRegeocode(regeocode, fallbackLabel='') {
+  const result = regeocode || {};
+  const component = result.addressComponent || {};
+  const read = value => Array.isArray(value) ? String(value[0] || '') : String(value || '');
+  const neighborhood = normalizeLocationPlace(read(component.neighborhood));
+  if (neighborhood) return neighborhood;
+
+  let preciseAddress = String(result.formattedAddress || '').trim();
+  [component.province,component.city,component.district,component.township]
+    .map(read)
+    .filter(Boolean)
+    .forEach(part => { preciseAddress = preciseAddress.replace(part,''); });
+  preciseAddress = normalizeLocationPlace(preciseAddress);
+  if (preciseAddress) return preciseAddress;
+
+  const preferredPoi = (result.pois || []).find(poi => {
+    const distance = Number(poi?.distance);
+    return Number.isFinite(distance) && distance <= 500
+      && /住宅区|住宅小区|村庄|乡镇|地名地址信息|风景名胜/.test(String(poi?.type || ''));
+  });
+  return normalizeLocationPlace(preferredPoi?.name);
 }
 
 persistLocationState();
@@ -7773,13 +7844,13 @@ function _updateCategoryList(cats) {
     const name = preview ? '赶集旅人 2086' : (user?.nickname || '游客');
     setText('my-v2-name',name);
     setText('my-v2-avatar',preview ? '集' : name === '游客' ? '游' : (name.trim().slice(0,1) || '集'));
-    const effectiveRegion = displayLocationRegion(locationState.effectiveRegion);
-    setText('my-v2-login-state',preview ? '微信已登录' : user ? `已登录 · ${effectiveRegion || user.city || '地区待设置'}` : '登录后同步收藏、提醒与评价');
+    const effectiveLocation = detailedLocationLabel();
+    setText('my-v2-login-state',preview ? '微信已登录' : user ? `已登录 · ${effectiveLocation || user.city || '地区待设置'}` : '登录后同步收藏、提醒与评价');
     setText('my-v2-fav-stat',`收藏 ${favCount}`);
     setText('my-v2-reminder-stat',`提醒 ${reminderCount}`);
     setText('my-v2-review-stat',`评价 ${reviewCount}`);
     setText('my-v2-map-label',`${mapLabelV2()} · 点击修改`);
-    setText('my-v2-region-label',effectiveRegion || '未定位 · 点击选择');
+    setText('my-v2-region-label',effectiveLocation || '未定位 · 点击选择');
     setText('my-v2-review-label',preview ? '2 条已发布 · 1 条管理员审核中' : `${reviewCount} 条已发布`);
     const large = localStorage.getItem('zjsLargeText') === '1';
     document.body.classList.toggle('large-text-v2',large);
@@ -8122,14 +8193,20 @@ function _updateCategoryList(cats) {
         const _cLng  = parseFloat(localStorage.getItem('_locLng') || '');
 
         const _cAt   = parseInt(localStorage.getItem('_locAt')   || '0');
+        const _cVersion = localStorage.getItem('_locVersion') || '';
 
         const _cAddr = localStorage.getItem('_locAddr') || '上次位置';
+        const _cPlace = localStorage.getItem('_locPlace') || undefined;
 
-        if (_cLat && _cLng && (Date.now() - _cAt) < 24 * 60 * 60 * 1000) {
+        if (_cVersion === LOCATION_CACHE_VERSION && _cLat && _cLng && (Date.now() - _cAt) < LOCATION_CACHE_TTL_MS) {
 
           // 静默恢复缓存坐标，立即显示距离（不弹授权）
 
-          onLocated(_cLat, _cLng, true, _cAddr);
+          onLocated(_cLat, _cLng, true, _cAddr, null, _cPlace, {cacheRestore:true,cachedAt:_cAt});
+
+        } else {
+
+          clearStoredLocationCache();
 
         }
 
@@ -8745,7 +8822,7 @@ function setHomeRuntimeState(state, options={}) {
   if (locationName && options.locationName && document.body.classList.contains('home-preview')) locationName.textContent = options.locationName;
   if (state === 'empty') {
     const summary = document.getElementById('home-empty-location-title');
-    if (summary) summary.textContent = `已定位：${options.locationName || displayLocationRegion(locationState.effectiveRegion) || '当前位置'}`;
+    if (summary) summary.textContent = `已定位：${options.locationName || compactLocationLabel() || '当前位置'}`;
   }
 }
 
@@ -10208,15 +10285,20 @@ function waitForAmap(callback, maxWait = 8000) {
 function onBrowserGeolocation(position, fallbackLabel='浏览器定位') {
   const lat = position.coords.latitude;
   const lng = position.coords.longitude;
-  if (!window.AMap) { onLocated(lat,lng,true,fallbackLabel); return; }
+  resolveLocatedPosition(lat,lng,fallbackLabel);
+}
+
+function resolveLocatedPosition(lat, lng, fallbackLabel='当前位置', fallbackComponent=null) {
+  if (!window.AMap) { onLocated(lat,lng,true,fallbackLabel,fallbackComponent); return; }
   AMap.plugin('AMap.Geocoder',()=>{
-    const geocoder = new AMap.Geocoder({extensions:'all'});
+    const geocoder = new AMap.Geocoder({extensions:'all',radius:1000});
     geocoder.getAddress([lng,lat],(status,result)=>{
       const regeocode = status === 'complete' ? result.regeocode : null;
       onLocated(
         lat,lng,true,
         regeocode?.formattedAddress || fallbackLabel,
-        regeocode?.addressComponent || null
+        regeocode?.addressComponent || fallbackComponent,
+        locationPlaceFromRegeocode(regeocode,fallbackLabel)
       );
     });
   });
@@ -10264,7 +10346,7 @@ function silentLocate() {
 
           const fullAddr = result.formattedAddress || result.addressComponent?.district || result.addressComponent?.city || '当前位置';
 
-          onLocated(result.position.lat, result.position.lng, true, fullAddr, result.addressComponent || null);
+          resolveLocatedPosition(result.position.lat, result.position.lng, fullAddr, result.addressComponent || null);
 
         } else if (!refreshOnly) { tryBrowser(); }
 
@@ -10375,7 +10457,7 @@ function doLocate() {
 
           const addr = result.formattedAddress || result.addressComponent?.city || '';
 
-          onLocated(lat, lng, true, addr || '高德定位成功', result.addressComponent || null);
+          resolveLocatedPosition(lat, lng, addr || '高德定位成功', result.addressComponent || null);
 
         } else {
 
@@ -10541,7 +10623,7 @@ function _checkCityOpen(addrLabel) {
 
 // ── 定位完成回调 ────────────────────────────────────────────
 
-function onLocated(lat, lng, real, addrLabel, addressComponent=null) {
+function onLocated(lat, lng, real, addrLabel, addressComponent=null, placeLabel=undefined, meta={}) {
 
   isLocating = false;
 
@@ -10552,6 +10634,9 @@ function onLocated(lat, lng, real, addrLabel, addressComponent=null) {
   const resolvedGpsRegion = located
     ? locationRegionFromAddress(addressComponent,addrLabel) || previousGpsRegion
     : null;
+  const resolvedGpsPlace = located && placeLabel !== undefined
+    ? normalizeLocationPlace(placeLabel)
+    : undefined;
 
   hasLocation = located;
 
@@ -10575,7 +10660,7 @@ function onLocated(lat, lng, real, addrLabel, addressComponent=null) {
 
 
 
-  setGpsRegion(resolvedGpsRegion);
+  setGpsRegion(resolvedGpsRegion, located ? (resolvedGpsPlace ?? null) : null, meta);
 
   if (located) {
     setHomeRuntimeState('list');
@@ -10589,7 +10674,7 @@ function onLocated(lat, lng, real, addrLabel, addressComponent=null) {
       if (document.body.classList.contains('map-v2-active')) initMapV2();
     } else {
       _setHomeLocationStatus(
-        displayLocationRegion(locationState.effectiveRegion) || addrLabel || '已获取当前位置',
+        compactLocationLabel() || addrLabel || '已获取当前位置',
         '已按实际距离推荐附近集市',
         true
       );
@@ -10600,7 +10685,7 @@ function onLocated(lat, lng, real, addrLabel, addressComponent=null) {
         });
       }
       if (resolvedGpsRegion && resolvedGpsRegion !== previousGpsRegion) {
-        showToast(`已定位到 ${displayLocationRegion(resolvedGpsRegion)}`);
+        showToast(`已定位到 ${compactLocationLabel() || displayLocationRegion(resolvedGpsRegion)}`);
       }
     }
   } else {
@@ -10619,7 +10704,7 @@ function onLocated(lat, lng, real, addrLabel, addressComponent=null) {
 
   const descEl = document.getElementById('nearby-loc-desc');
 
-  if (descEl) descEl.textContent = located ? `📍 ${displayLocationRegion(locationState.effectiveRegion) || '当前位置'}` : '开启位置权限后可查看真实距离';
+  if (descEl) descEl.textContent = located ? `📍 ${detailedLocationLabel() || '当前位置'}` : '开启位置权限后可查看真实距离';
 
 
 
@@ -10627,23 +10712,30 @@ function onLocated(lat, lng, real, addrLabel, addressComponent=null) {
 
   if (located) {
 
-    try {
+    if (!meta.cacheRestore) {
 
-      localStorage.setItem('_locLat', userLat);
+      try {
 
-      localStorage.setItem('_locLng', userLng);
+        localStorage.setItem('_locLat', userLat);
 
-      localStorage.setItem('_locAt',  Date.now());
+        localStorage.setItem('_locLng', userLng);
 
-      if (addrLabel) localStorage.setItem('_locAddr', addrLabel);
+        localStorage.setItem('_locAt',  Date.now());
 
-    } catch(e) {}
+        if (addrLabel) localStorage.setItem('_locAddr', addrLabel);
+        if (resolvedGpsPlace) localStorage.setItem('_locPlace', resolvedGpsPlace);
+        else localStorage.removeItem('_locPlace');
+        localStorage.setItem('_locVersion', LOCATION_CACHE_VERSION);
+
+      } catch(e) {}
+
+    }
 
   } else {
 
     try {
 
-      ['_locLat','_locLng','_locAt','_locAddr'].forEach(key => localStorage.removeItem(key));
+      clearStoredLocationCache();
 
     } catch(e) {}
 
