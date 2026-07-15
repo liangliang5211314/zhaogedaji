@@ -139,6 +139,41 @@ passed
 
 ---
 
+## 徐水区首页 Region / GPS 统一链路生产验收（2026-07-15）
+
+- 生产版本：`2ae1bd4`，验收地址 `https://app.xingjiawu.cn/`。
+- 设计同步：Figma `3u4j48Ti8r2Er7gipvfAJT` 分区 01 已注明“地图悬浮 pill 固定于底部导航上方（含定位失败态）”；上午、下午、定位失败与入口优化态均已把入口移到固定层。
+- 精确 375px 档案：`output/playwright/production-xushui-top-375.png`、`output/playwright/production-xushui-bottom-375-v2.png`。
+- USB 真机档案：`output/production-qa/2026-07-15-region-home/device-xushui-top.png`、`output/production-qa/2026-07-15-region-home/device-xushui-bottom-v2.png`。
+- Figma 标注档案：`output/design-qa/figma-home-map-pill.png`。
+
+### Region 模式与无限滚动
+
+- 手选“徐水区”后，由服务端以该区 110 条有坐标记录计算质心 `115.6452146, 39.0265919`，再走与 GPS 相同的 `/api/markets/nearby` 分页、状态派生与推荐排序链路；不设地区硬半径。
+- 接口返回 141 条，其中 110 条有坐标、31 条坐标待补充；缺坐标记录仍进入地区全量列表，距离显示“距离待补充”，不影响集期状态。
+- 生产请求按 20 条一页加载为 `20 × 7 + 1`；滚到末尾得到 141 条、141 个唯一 ID，无重复或遗漏，页尾显示“已看完徐水区 141 个集市”。
+- 真机 IntersectionObserver 连续触发到末页；所有 141 条经 `_homeStatusMeta` 检查均有文字角标，`needs_review` 使用“集期待核实”，不参与今天/下一场派生。
+- “只看今天”使用同一接口的 `today_only=1`，生产徐水区当前返回 14 条，14 条均为今天状态；横幅数量来自接口 `today_total`，点击“去看看”不会只过滤首屏。
+
+### 固定入口、状态与 GPS 回归
+
+- 真机滚动前后地图 pill 的 CSS 视口矩形均为 `top=573.09 / bottom=615.09`，`position=fixed`，列表滚动到 `scrollTop=17541.09` 后位置不变；定位失败态同样显示入口。
+- 今天有集、明天开集、今日已结束只由 `open_time v2` 与历法服务派生，和 GPS/质心是否存在解耦；今天优先、已结束沉底。
+- GPS 回归使用 `38.900919, 115.482494` 调同一链路：`region=null`、`distance_context=gps`、总数 1014、首屏 20 条、空状态角标 0；地区模式测试后已恢复徐水区。
+- 集期文案优先识别口诀：完整展开的 `[1,6,11,16,21,26]` 显示“阴历逢一、逢六”，`[1,3,6,11,13,16,21,23,26]` 显示“阴历逢一、逢三、逢六”；无法归纳的复杂组合才使用“等 N 天”。
+
+### 自动化与发布检查
+
+- `/api/markets/nearby` 增加 Region 质心、缺坐标保留、稳定分页、越界 offset、汇总计数等回归；全量 pytest `61 passed`。
+- 生产部署前数据库备份：`/www/wwwroot/zhaogedaji/data/backups/deploy_20260715_185927/zhaojishi.db`；本地、公开健康检查与数据库完整性检查均通过。
+- 375px 浏览器与 USB 真机均未发现控制台 error；GPS 原有链路未回归。
+
+### final result
+
+passed
+
+---
+
 ## 真机定位地点与缓存准确性
 
 - 触发原因：USB 真机右上角显示“莲池区”，但此前同一设备曾显示到“尚玉园”；定位名称与实际地点、附近推荐结果不一致。
