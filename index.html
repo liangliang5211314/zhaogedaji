@@ -4468,6 +4468,14 @@ function loadRecentRegions() {
 }
 
 const locationState = loadLocationState();
+const initialCachedLat = parseFloat(localStorage.getItem('_locLat') || '');
+const initialCachedLng = parseFloat(localStorage.getItem('_locLng') || '');
+const hasFreshLocationCoordinate = !!locationState.gpsRegion
+  && Number.isFinite(initialCachedLat)
+  && Number.isFinite(initialCachedLng)
+  && Math.abs(initialCachedLat) <= 90
+  && Math.abs(initialCachedLng) <= 180
+  && !(initialCachedLat === 0 && initialCachedLng === 0);
 let zjsRecentRegions = loadRecentRegions();
 
 function displayLocationRegion(region) {
@@ -4623,7 +4631,7 @@ let homeRenderLimit = 40;
 
 let selectedCat = '全部';
 
-let hasLocation = false;
+let hasLocation = hasFreshLocationCoordinate;
 
 let isLocating = false;
 
@@ -9455,7 +9463,8 @@ function _renderFairCard(m) {
 
 // ═══════════════════════════════════════════════════════════
 
-let userLat = null, userLng = null;
+let userLat = hasFreshLocationCoordinate ? initialCachedLat : null;
+let userLng = hasFreshLocationCoordinate ? initialCachedLng : null;
 
 let nearbyAmapInstance = null;    // 附近页地图实例
 
