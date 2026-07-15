@@ -9321,6 +9321,35 @@ function recommendV3RegionLabel(region){
   return parts.at(-1) || '当前地区';
 }
 
+function recommendV3CityKey(region){
+  const parts = String(region || '').split('·').map(part=>part.trim()).filter(Boolean);
+  const city = parts.find(part=>/(?:市|自治州|地区|盟)$/.test(part));
+  return city ? city.replace(/(?:市|自治州|地区|盟)$/,'') : '';
+}
+
+function recommendV3FilterPopular(items,scopeRegion){
+  const currentCity = recommendV3CityKey(scopeRegion);
+  return (items || []).filter(item=>{
+    if (!currentCity) return true;
+    return recommendV3CityKey(item.region || item.display_name) !== currentCity;
+  }).slice(0,3);
+}
+
+function recommendV3FeatureLabel(market){
+  const tags = (market.tags || []).map(tag=>String(tag).trim()).filter(Boolean);
+  if (tags.some(tag=>/土货|特产/.test(tag))) return '土货 · 特产';
+
+  const category = _homePrimaryCategory(market).replace('农村大集','大集').replace(/集市$/,'') || '大集';
+  const defaults = {夜市:'烟火气',早市:'新鲜',庙会:'民俗',大集:'土货'};
+  const feature = tags.find(tag=>{
+    if (['当地特色','特色认证'].includes(tag)) return false;
+    if (/(?:大集|集市|夜市|早市|庙会)/.test(tag)) return false;
+    return !/(?:省|市|区|县|乡|镇|村)$/.test(tag);
+  }) || defaults[category] || '特色';
+  const featureLimit = Math.max(1,6 - category.length);
+  return `${category} · ${feature.slice(0,featureLimit)}`;
+}
+
 function recommendV3MapMarket(item){
   const market = _mapApiMarket(item);
   market.daysUntil = Number(item.days_until);
@@ -9346,7 +9375,7 @@ function renderRecommendationV3(payload,popular){
   recommendV3Data.temples = (payload?.temple_fairs || []).map(recommendV3MapMarket);
   recommendV3Data.timeline = (payload?.temple_timeline || payload?.temple_fairs || []).map(recommendV3MapMarket);
   recommendV3Data.featured = (payload?.featured_markets || []).map(recommendV3MapMarket);
-  recommendV3Data.popular = popular || recommendV3Data.popular || [];
+  recommendV3Data.popular = recommendV3FilterPopular(popular || recommendV3Data.popular || [],payload?.scope_region);
 
   const hasRegion = !!payload?.scope_region;
   const hourMode = payload?.time_mode || (new Date().getHours() < 12 ? 'morning' : 'afternoon');
@@ -9385,8 +9414,7 @@ function renderRecommendationV3(payload,popular){
   if (featuredSection) featuredSection.hidden = !recommendV3Data.featured.length;
   const featuredList = document.getElementById('recommend-v3-featured-list');
   if (featuredList) featuredList.innerHTML = recommendV3Data.featured.map((market,index)=>{
-    const featureTags = (market.tags || []).filter(tag=>!['当地特色','特色认证'].includes(tag)).slice(0,2);
-    const featureLabel = featureTags.join(' · ') || `${_homePrimaryCategory(market)} · 集市`;
+    const featureLabel = recommendV3FeatureLabel(market);
     return `<button class="recommend-v3-feature-card" type="button" onclick="openRecommendationV3Market('featured',${index})"><span class="recommend-v3-feature-top"><span class="recommend-v3-feature-badge">${_homeEscape(featureLabel)}</span><span class="recommend-v3-feature-category">${_homeEscape(_homePrimaryCategory(market))}</span></span><span class="recommend-v3-feature-name">${_homeEscape(_homeMarketDisplayName(market))}</span><span class="recommend-v3-feature-meta">${_homeEscape(_homeScheduleText(market))}</span><span class="recommend-v3-feature-rating">${_homeEscape(_homeRatingText(market))}</span></button>`;
   }).join('');
 
@@ -9412,7 +9440,7 @@ async function loadRecommendationHome(force=false){
   try {
     const [recommendationResponse,popularResponse] = await Promise.all([
       fetch('/api/markets/recommendations?' + new URLSearchParams({region}).toString()),
-      fetch('/api/regions/popular?limit=3&scope=city')
+      fetch('/api/regions/popular?limit=4&scope=city')
     ]);
     const recommendationPayload = await recommendationResponse.json();
     const popularPayload = await popularResponse.json();
@@ -9628,7 +9656,8 @@ function applyHomePreviewState() {
   },[
     {region:'河北省·保定市',display_name:'保定',market_count:1142,featured_tags:['土货特产']},
     {region:'河北省·唐山市',display_name:'唐山',market_count:169,featured_tags:['农村大集']},
-    {region:'河北省·沧州市',display_name:'沧州',market_count:141,featured_tags:['庙会']}
+    {region:'河北省·沧州市',display_name:'沧州',market_count:141,featured_tags:['庙会']},
+    {region:'河北省·邢台市',display_name:'邢台',market_count:347,featured_tags:['农村大集']}
   ]);
   return true;
 }
