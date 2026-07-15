@@ -10317,9 +10317,24 @@ function resolveLocatedPosition(lat, lng, fallbackLabel='当前位置', fallback
 
 // 静默后台定位（不跳页面，仅更新距离）
 
-function silentLocate() {
+function silentLocate(permissionChecked=false) {
 
   if (isLocating) return;
+
+  // 未授权时不在冷启动阶段抢占定位流程；首次授权必须由用户点击触发。
+  if (!permissionChecked && navigator.permissions?.query) {
+
+    navigator.permissions.query({name:'geolocation'}).then(permission => {
+
+      if (permission.state === 'granted') silentLocate(true);
+
+      else if (!hasLocation) onLocated(null, null, false, '定位未开启');
+
+    }).catch(() => silentLocate(true));
+
+    return;
+
+  }
 
   // 已有缓存定位时仍尝试刷新实时位置（但不重置 hasLocation，避免界面抖动）
 
@@ -10327,7 +10342,19 @@ function silentLocate() {
 
   isLocating = true;
 
+  const watchdog = setTimeout(() => {
+
+    if (!isLocating) return;
+
+    if (refreshOnly) isLocating = false;
+
+    else onLocated(null, null, false, '定位超时');
+
+  },12000);
+
   const tryBrowser = () => {
+
+    clearTimeout(watchdog);
 
     if (navigator.geolocation) {
 
@@ -10352,6 +10379,8 @@ function silentLocate() {
       const geo = new AMap.Geolocation({ enableHighAccuracy: false, timeout: 8000, noIpLocate: 0, needAddress: true });
 
       geo.getCurrentPosition((status, result) => {
+
+        clearTimeout(watchdog);
 
         if (status === 'complete' && result.position) {
 
