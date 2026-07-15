@@ -190,6 +190,20 @@ def test_default_list_stays_distance_sorted_while_returning_recommendations(
     )
 
 
+def test_today_only_filters_before_pagination(recommendation_client, monkeypatch):
+    monkeypatch.setattr(
+        app_module, "_nearby_now", lambda: datetime(2026, 7, 13, 15, 0)
+    )
+    response = recommendation_client.get(
+        "/api/markets/nearby?lat=38.8730&lng=115.4646&radius=10&limit=20&today_only=1"
+    )
+    data = response.get_json()["data"]
+    assert [item["id"] for item in data["list"]] == ["night"]
+    assert data["total"] == 1
+    assert data["has_more"] is False
+    assert data["today_only"] is True
+
+
 def test_morning_prioritizes_today_market_and_category_filter_overrides_mix(
     recommendation_client, monkeypatch
 ):

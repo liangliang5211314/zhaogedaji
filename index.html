@@ -8247,6 +8247,7 @@ async function loadNearbyPage(surface){
       limit:NEARBY_PAGE_SIZE, offset:pageOffset, sort:'distance'
     });
     if (state.category && state.category !== '全部') params.set('category',state.category);
+    if (state.todayOnly) params.set('today_only','1');
     const response = await fetch('/api/markets/nearby?' + params.toString());
     const payload = await response.json();
     if (!response.ok || payload.code !== 200) throw new Error(payload.msg || '附近接口失败');

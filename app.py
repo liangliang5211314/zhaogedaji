@@ -1800,6 +1800,7 @@ def nearby_markets():
     if sort_mode not in {'distance', 'recommended'}:
         return jsonify({'code': 400, 'msg': 'sort 只支持 distance 或 recommended'}), 400
     category = request.args.get('category') or request.args.get('cat')
+    today_only = str(request.args.get('today_only', '')).lower() in {'1', 'true', 'yes', 'on'}
     radius_m = radius_km * 1000
     limit = min(limit, 200)
 
@@ -1826,9 +1827,14 @@ def nearby_markets():
         -(item.get('rating') or 0),
         str(item.get('id') or ''),
     ))
-    matched_total = len(items)
     now = _nearby_now()
     candidates = [_derive_market_schedule(item, now) for item in items]
+    if today_only:
+        candidates = [
+            item for item in candidates
+            if item.get('schedule_status') in {'today', 'daily'}
+        ]
+    matched_total = len(candidates)
     distance_items = candidates[offset:offset + limit]
     recommended_items = sorted(
         candidates,
@@ -1846,6 +1852,7 @@ def nearby_markets():
             'offset': offset,
             'matched_total': matched_total,
             'sort': sort_mode,
+            'today_only': today_only,
         },
         'markets': selected,
         'total': matched_total,
