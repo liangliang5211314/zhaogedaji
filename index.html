@@ -2072,6 +2072,41 @@ body.trigger-preview{background:#F1EEE8;}.trigger-preview #user-screen .user-app
 .region-v2-current{height:82px;margin-top:16px;padding:0 16px;display:flex;align-items:center;border-radius:16px;background:#fff;box-shadow:0 7px 20px rgba(46,38,28,.08);}.region-v2-current-icon{width:48px;height:48px;border-radius:50%;background:#EAF3ED;color:var(--color-pine);display:flex;align-items:center;justify-content:center;}.region-v2-current-icon .material-symbols-outlined{font-size:24px;}.region-v2-current-copy{margin-left:14px;flex:1;}.region-v2-current-label{font-size:13px;line-height:19px;color:#8A918B;}.region-v2-current-name{font-size:16px;line-height:24px;font-weight:600;color:var(--color-ink);}.region-v2-relocate{min-width:70px;height:44px;border:0;background:transparent;color:var(--color-brand);font:500 14px/20px 'Noto Sans SC',sans-serif;cursor:pointer;}
 .region-v2-block-title{margin-top:24px;font:700 17px/25px 'Noto Serif SC','Songti SC',serif;color:var(--color-ink);}.region-v2-subtitle{margin-top:2px;color:#72766F;font-size:13px;line-height:19px;}.region-v2-recents{display:flex;gap:10px;margin-top:12px;}.region-v2-recent{height:40px;padding:0 16px;border:0;border-radius:20px;background:#fff;color:#4D554E;font:500 14px/20px 'Noto Sans SC',sans-serif;cursor:pointer;}
 .region-v2-hot-list{display:flex;flex-direction:column;gap:8px;margin-top:16px;}.region-v2-hot{height:60px;padding:0 12px 0 14px;display:flex;align-items:center;border:0;border-radius:14px;background:#fff;text-align:left;cursor:pointer;}.region-v2-dot{width:20px;height:20px;border-radius:50%;margin-right:14px;background:#E0A832;}.region-v2-hot:nth-child(even) .region-v2-dot{background:#2D6A4F;}.region-v2-hot-copy{min-width:0;flex:1;}.region-v2-hot-name{display:block;font-size:15px;line-height:22px;font-weight:600;color:var(--color-ink);}.region-v2-hot-tags{display:block;font-size:12px;line-height:18px;color:#72766F;}.region-v2-count{color:var(--color-brand);font-size:13px;line-height:19px;white-space:nowrap;}.region-v2-note{margin-top:22px;padding:11px 14px;border-radius:14px;background:#F4EBD8;color:#657067;font-size:12px;line-height:18px;}
+
+/* APP V2 · 集市搜索（沿用地区搜索页的全屏层级与视觉语言） */
+.search-v2-active #user-screen .user-top-bar,.search-v2-active #user-screen .user-bottom-nav{display:none!important;}
+.search-v2-page{min-height:100%;padding:0 16px 28px;background:var(--color-paper);color:var(--color-ink);}
+.search-v2-header{position:sticky;top:0;z-index:8;height:64px;margin:0 -16px;padding:0 12px;display:flex;align-items:center;justify-content:center;background:#fff;}
+.search-v2-back{position:absolute;left:12px;width:44px;height:44px;border:0;border-radius:22px;background:transparent;color:var(--color-ink);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.search-v2-back .material-symbols-outlined{font-size:22px;}
+.search-v2-header h1{font:700 20px/29px 'Noto Serif SC','Songti SC',serif;color:var(--color-ink);}
+.search-v2-field{height:52px;margin-top:16px;padding:0 8px 0 14px;display:flex;align-items:center;gap:10px;border:1px solid var(--color-border);border-radius:16px;background:#fff;}
+.search-v2-field>.material-symbols-outlined{font-size:19px;color:#657067;}
+.search-v2-field input{min-width:0;flex:1;border:0;outline:0;background:transparent;color:var(--color-ink);font:400 16px/24px 'Noto Sans SC','PingFang SC',sans-serif;}
+.search-v2-field input::placeholder{color:#8A918B;}
+.search-v2-clear{width:44px;height:44px;border:0;border-radius:22px;background:transparent;color:#737A73;display:flex;align-items:center;justify-content:center;cursor:pointer;visibility:hidden;}
+.search-v2-clear.show{visibility:visible;}.search-v2-clear .material-symbols-outlined{font-size:19px;}
+.search-v2-categories{display:flex;gap:8px;margin:14px -16px 0;padding:0 16px 2px;overflow-x:auto;scrollbar-width:none;}.search-v2-categories::-webkit-scrollbar{display:none;}
+.search-v2-category{height:36px;min-width:58px;padding:0 16px;border:1px solid var(--color-border);border-radius:18px;background:#fff;color:#424941;font:500 14px/20px 'Noto Sans SC','PingFang SC',sans-serif;white-space:nowrap;cursor:pointer;}
+.search-v2-category.active{border-color:var(--color-pine);background:var(--color-pine);color:#fff;font-weight:600;}
+.search-v2-section-head{min-height:28px;margin-top:22px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.search-v2-section-head h2{font:700 17px/25px 'Noto Serif SC','Songti SC',serif;color:var(--color-ink);}
+.search-v2-section-action{min-width:44px;height:44px;margin:-8px -8px -8px 0;padding:0 8px;border:0;background:transparent;color:#737A73;font:500 13px/19px 'Noto Sans SC',sans-serif;cursor:pointer;}
+.search-v2-history{display:flex;gap:8px;margin-top:10px;overflow-x:auto;scrollbar-width:none;}.search-v2-history::-webkit-scrollbar{display:none;}
+.search-v2-history-chip{min-height:40px;padding-right:6px;display:flex;align-items:center;border-radius:20px;background:#fff;color:#4D554E;white-space:nowrap;}.search-v2-history-open{min-height:40px;padding-left:14px;display:flex;align-items:center;gap:4px;border:0;background:transparent;color:inherit;font:500 14px/20px 'Noto Sans SC',sans-serif;cursor:pointer;}.search-v2-history-open>.material-symbols-outlined{font-size:17px;color:#7B837B;}.search-v2-history-remove{width:32px;height:32px;border:0;border-radius:16px;background:transparent;color:#8A918B;display:flex;align-items:center;justify-content:center;cursor:pointer;}.search-v2-history-remove .material-symbols-outlined{font-size:16px;}
+.search-v2-history-empty{margin-top:10px;color:#8A918B;font-size:13px;line-height:20px;}
+.search-v2-hot-list{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+.search-v2-hot{height:60px;padding:0 12px 0 14px;display:flex;align-items:center;border:0;border-radius:14px;background:#fff;text-align:left;cursor:pointer;}
+.search-v2-hot-icon{width:40px;height:40px;border-radius:12px;background:#F6E6C4;color:#8B5D0A;display:flex;align-items:center;justify-content:center;flex:0 0 40px;}.search-v2-hot:nth-child(even) .search-v2-hot-icon{background:#E8F2EA;color:var(--color-pine);}.search-v2-hot-icon .material-symbols-outlined{font-size:21px;}
+.search-v2-hot-copy{min-width:0;flex:1;margin-left:12px;}.search-v2-hot-name{display:block;color:var(--color-ink);font-size:15px;line-height:22px;font-weight:600;}.search-v2-hot-sub{display:block;color:#72766F;font-size:12px;line-height:18px;}.search-v2-hot>.material-symbols-outlined{font-size:20px;color:#8A918B;}
+.search-v2-note{margin-top:20px;padding:11px 14px;border-radius:14px;background:#F4EBD8;color:#657067;font-size:12px;line-height:19px;}
+.search-v2-result-head{min-height:26px;margin-top:18px;display:flex;align-items:center;justify-content:space-between;color:#72766F;font-size:13px;line-height:19px;}.search-v2-result-head strong{color:var(--color-brand);font-weight:600;}
+.search-v2-result-list{display:flex;flex-direction:column;gap:12px;margin-top:10px;}
+.search-v2-card{width:100%;min-height:116px;padding:12px;border:0;border-radius:18px;background:#fff;box-shadow:var(--shadow-card);text-align:left;color:var(--color-ink);cursor:pointer;}
+.search-v2-card-top,.search-v2-card-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px;}.search-v2-card-status{height:26px;padding:0 13px;border-radius:13px;display:inline-flex;align-items:center;background:#F1EEE8;color:#535951;font-size:13px;line-height:19px;font-weight:600;}.search-v2-card-status.today{background:#FFE0D2;color:#B7371B;}.search-v2-card-status.tomorrow{background:#E8EFEA;color:#2F5D43;}.search-v2-card-status.night{background:#E7E9F5;color:#435391;}.search-v2-card-status.daily{background:#FFF0CD;color:#8B5900;}.search-v2-card-status.ended{background:#EEECE7;color:#73766F;}.search-v2-card-status.feature{background:#F7E7C5;color:#77510B;}
+.search-v2-card-distance{color:#697169;font-size:13px;line-height:19px;white-space:nowrap;}.search-v2-card-name{display:block;margin-top:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 19px/27px 'Noto Serif SC','Songti SC',serif;}.search-v2-card-bottom{margin-top:3px;}.search-v2-card-schedule{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#737A73;font-size:13px;line-height:20px;}.search-v2-card-rating{flex:0 0 auto;color:var(--color-brand);font-size:13px;line-height:19px;white-space:nowrap;}.search-v2-card-rating.empty{color:#989B95;}
+.search-v2-no-result{padding:56px 20px;text-align:center;color:#737A73;}.search-v2-no-result-icon{width:82px;height:82px;margin:0 auto;border-radius:26px;background:#FFF0E6;color:var(--color-brand);display:flex;align-items:center;justify-content:center;}.search-v2-no-result-icon .material-symbols-outlined{font-size:36px;}.search-v2-no-result strong{display:block;margin-top:14px;font:700 17px/25px 'Noto Serif SC',serif;color:var(--color-ink);}.search-v2-no-result p{margin-top:6px;font-size:13px;line-height:20px;}
+.search-v2-back:focus-visible,.search-v2-clear:focus-visible,.search-v2-category:focus-visible,.search-v2-section-action:focus-visible,.search-v2-history-open:focus-visible,.search-v2-history-remove:focus-visible,.search-v2-hot:focus-visible,.search-v2-card:focus-visible{outline:2px solid var(--color-brand);outline-offset:2px;}
 .trigger-v2-context{display:none;min-height:788px;padding:0 16px;background:var(--color-paper);}.trigger-preview .trigger-v2-context{display:block;}.trigger-v2-context-head{height:78px;margin:0 -16px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;background:#fff;border-bottom:1px solid var(--color-border);}.trigger-v2-context-head h2{font:700 20px/29px 'Noto Serif SC',serif;}.trigger-v2-context-card{height:182px;margin-top:20px;padding:16px;border-radius:18px;background:#fff;box-shadow:var(--shadow-card);}.trigger-v2-context-card .detail-v2-status{margin-bottom:12px;}.trigger-v2-context-card h3{font:700 22px/31px 'Noto Serif SC',serif;}.trigger-v2-context-card p{margin-top:4px;color:#657067;font-size:14px;line-height:21px;}.trigger-v2-context-action{float:right;margin-top:12px;height:48px;padding:0 18px;border:0;border-radius:14px;background:#FFF0E6;color:var(--color-brand);font-size:14px;font-weight:600;}
 .trigger-v2-overlay{position:fixed;inset:0;z-index:1200;display:none;align-items:flex-end;justify-content:center;background:rgba(31,41,35,.48);}.trigger-v2-overlay.open{display:flex;}.trigger-v2-sheet{width:min(100%,375px);padding:18px 16px 24px;border-radius:26px 26px 0 0;background:#fff;box-shadow:0 -8px 30px rgba(31,41,35,.12);}.trigger-v2-sheet.login{height:466px;}.trigger-v2-sheet.reminder{height:526px;}.trigger-v2-sheet.navigation{height:588px;}.trigger-v2-handle{width:40px;height:4px;margin:0 auto 10px;border-radius:2px;background:#DED8CC;}.trigger-v2-close{position:absolute;right:16px;top:18px;width:44px;height:44px;border:0;background:transparent;color:#657067;display:flex;align-items:center;justify-content:center;cursor:pointer;}.trigger-v2-sheet-inner{position:relative;height:100%;}.trigger-v2-kicker{margin-top:16px;color:var(--color-brand);font-size:13px;line-height:19px;font-weight:600;}.trigger-v2-title{margin-top:8px;font:700 23px/32px 'Noto Serif SC','Songti SC',serif;color:var(--color-ink);}.trigger-v2-copy{margin-top:4px;color:#737A73;font-size:14px;line-height:21px;}.trigger-v2-primary{width:100%;height:56px;border:0;border-radius:16px;background:var(--color-pine);color:#fff;font:600 16px/24px 'Noto Sans SC',sans-serif;cursor:pointer;}.trigger-v2-primary.brand{background:var(--color-brand);}.trigger-v2-primary.login-wechat{margin-top:24px;}.trigger-v2-primary .material-symbols-outlined{vertical-align:-4px;margin-right:8px;}.trigger-v2-divider{height:36px;display:flex;align-items:center;gap:18px;color:#8A918B;font-size:12px;}.trigger-v2-divider::before,.trigger-v2-divider::after{content:'';height:1px;flex:1;background:#E6E0D5;}.trigger-v2-secondary{width:100%;height:54px;border:1px solid var(--color-border);border-radius:16px;background:#fff;color:var(--color-ink);font:600 15px/22px 'Noto Sans SC',sans-serif;cursor:pointer;}.trigger-v2-promise{margin-top:18px;padding:9px 16px;border-radius:14px;background:#F4F0E8;color:#6F776F;font-size:12px;line-height:18px;}.trigger-v2-agreement{margin-top:24px;text-align:center;color:#8A918B;font-size:11px;line-height:17px;}
 .trigger-v2-success{margin-top:14px;display:flex;align-items:center;gap:12px;color:var(--color-pine);font-size:15px;font-weight:600;}.trigger-v2-success-icon{width:42px;height:42px;border-radius:50%;background:#E6F2E9;display:flex;align-items:center;justify-content:center;}.trigger-v2-success-icon .material-symbols-outlined{font-size:22px;}.trigger-v2-reminder-title{margin-top:10px;font:700 23px/32px 'Noto Serif SC',serif;}.trigger-v2-reminder-row{height:70px;margin-top:12px;padding:0 16px;display:flex;align-items:center;border-radius:14px;background:#F4F0E8;}.trigger-v2-reminder-copy{flex:1;}.trigger-v2-reminder-name{font-size:15px;line-height:22px;font-weight:600;}.trigger-v2-reminder-sub{font-size:12px;line-height:18px;color:#737A73;}.trigger-v2-reminder-time{margin-right:10px;color:var(--color-pine);font-size:14px;font-weight:600;}.trigger-v2-switch{width:38px;height:22px;border:0;border-radius:11px;background:var(--color-pine);position:relative;cursor:pointer;}.trigger-v2-switch::after{content:'';position:absolute;width:16px;height:16px;top:3px;right:3px;border-radius:50%;background:#fff;}.trigger-v2-switch.off{background:#C8CBC6;}.trigger-v2-switch.off::after{right:19px;}.trigger-v2-reminder-note{margin-top:18px;color:#737A73;font-size:12px;line-height:18px;}.trigger-v2-reminder-actions{margin-top:16px;}.trigger-v2-link{width:100%;height:48px;border:0;background:transparent;color:#657067;font:500 14px/20px 'Noto Sans SC',sans-serif;cursor:pointer;}
@@ -2637,107 +2672,54 @@ body:not(.account-v2-active) .home-v2-nav .bottom-nav-item.active .material-symb
 
 
 
-      <!-- ── 搜索页 ─────────────────────────────────────── -->
+      <!-- ── 集市搜索页 · APP V2 ─────────────────────────── -->
+      <section id="user-page-search" class="hidden search-v2-page" aria-labelledby="search-v2-title">
+        <header class="search-v2-header">
+          <button class="search-v2-back" type="button" onclick="closeSearchPage()" aria-label="返回">
+            <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+          </button>
+          <h1 id="search-v2-title">搜索集市</h1>
+        </header>
 
-      <div id="user-page-search" class="hidden" style="display:none;flex-direction:column;height:100%;">
+        <label class="search-v2-field">
+          <span class="material-symbols-outlined" aria-hidden="true">search</span>
+          <input id="search-main-input" type="search" placeholder="搜索集市、庙会、土货特产"
+                 autocomplete="off" enterkeyhint="search"
+                 oninput="doGlobalSearch(this.value)"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();commitGlobalSearch()}">
+          <button id="search-v2-clear" class="search-v2-clear" type="button" onclick="clearSearch()" aria-label="清空搜索">
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+          </button>
+        </label>
 
-        <!-- 搜索头 -->
+        <div class="search-v2-categories" id="search-cat-bar" role="group" aria-label="集市分类">
+          <button class="search-v2-category active" type="button" data-cat="全部" onclick="setSearchCat('全部',this)">全部</button>
+          <button class="search-v2-category" type="button" data-cat="大集" onclick="setSearchCat('大集',this)">大集</button>
+          <button class="search-v2-category" type="button" data-cat="庙会" onclick="setSearchCat('庙会',this)">庙会</button>
+          <button class="search-v2-category" type="button" data-cat="早市" onclick="setSearchCat('早市',this)">早市</button>
+          <button class="search-v2-category" type="button" data-cat="夜市" onclick="setSearchCat('夜市',this)">夜市</button>
+        </div>
 
-        <div style="background:var(--red);padding:12px 14px 10px;display:flex;align-items:center;gap:10px;">
-
-          <button onclick="closeSearchPage()" style="background:none;border:none;color:white;font-size:20px;cursor:pointer;padding:0;">‹</button>
-
-          <div style="flex:1;position:relative;">
-
-            <input id="search-main-input" type="text" placeholder="搜索集市名称、地址、标签..."
-
-                   style="width:100%;padding:9px 36px 9px 12px;border-radius:20px;border:none;
-
-                          font-size:14px;outline:none;box-sizing:border-box;"
-
-                   oninput="doGlobalSearch(this.value)"
-
-                   onkeydown="if(event.key==='Enter')doGlobalSearch(this.value)">
-
-            <button onclick="clearSearch()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);
-
-                    background:none;border:none;color:var(--gray);cursor:pointer;font-size:14px;">✕</button>
-
+        <div id="search-empty-state">
+          <div class="search-v2-section-head">
+            <h2>最近搜索</h2>
+            <button class="search-v2-section-action" id="search-v2-clear-history" type="button" onclick="clearSearchHistory()">清空</button>
           </div>
+          <div class="search-v2-history" id="search-history-tags"></div>
+          <div class="search-v2-history-empty" id="search-history-empty">暂无搜索记录</div>
 
-        </div>
-
-        <!-- 分类筛选 -->
-
-        <div style="background:var(--white);border-bottom:1px solid var(--paper-dark);
-
-                    padding:10px 14px;overflow-x:auto;scrollbar-width:none;
-
-                    display:flex;gap:6px;-webkit-overflow-scrolling:touch;" id="search-cat-bar">
-
-          <button class="search-cat-btn active" data-cat="全部" onclick="setSearchCat('全部',this)">全部</button>
-
-          <button class="search-cat-btn" data-cat="早市" onclick="setSearchCat('早市',this)">🌅 早市</button>
-
-          <button class="search-cat-btn" data-cat="夜市" onclick="setSearchCat('夜市',this)">🌙 夜市</button>
-
-          <button class="search-cat-btn" data-cat="集市" onclick="setSearchCat('集市',this)">🏮 集市</button>
-
-          <button class="search-cat-btn" data-cat="农贸市场" onclick="setSearchCat('农贸市场',this)">🌾 农贸</button>
-
-          <button class="search-cat-btn" data-cat="宠物市场" onclick="setSearchCat('宠物市场',this)">🐾 宠物</button>
-
-          <button class="search-cat-btn" data-cat="古玩市场" onclick="setSearchCat('古玩市场',this)">🏺 古玩</button>
-
-          <button class="search-cat-btn" data-cat="花鸟市场" onclick="setSearchCat('花鸟市场',this)">🌸 花鸟</button>
-
-        </div>
-
-        <!-- 搜索结果 -->
-
-        <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;" id="search-results-wrap">
-
-          <!-- 初始状态：热门搜索 -->
-
-          <div id="search-empty-state" style="padding:20px 14px;">
-
-            <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:12px;">🔥 热门搜索</div>
-
-            <div style="display:flex;flex-wrap:wrap;gap:8px;" id="hot-search-tags">
-
-              <span class="hot-tag" onclick="setSearchKw('早市')">早市</span>
-
-              <span class="hot-tag" onclick="setSearchKw('夜市')">夜市</span>
-
-              <span class="hot-tag" onclick="setSearchKw('集市')">集市</span>
-
-              <span class="hot-tag" onclick="setSearchKw('花鸟')">花鸟市场</span>
-
-              <span class="hot-tag" onclick="setSearchKw('古玩')">古玩</span>
-
-              <span class="hot-tag" onclick="setSearchKw('农贸')">农贸市场</span>
-
-              <span class="hot-tag" onclick="setSearchKw('周末')">周末集市</span>
-
-              <span class="hot-tag" onclick="setSearchKw('美食')">美食街</span>
-
-            </div>
-
-            <div style="font-size:13px;font-weight:700;color:var(--ink);margin:18px 0 12px;">🕐 搜索历史</div>
-
-            <div style="display:flex;flex-wrap:wrap;gap:8px;" id="search-history-tags"></div>
-
-            <div id="search-history-empty" style="font-size:12px;color:var(--gray);display:none;">暂无搜索记录</div>
-
+          <div class="search-v2-section-head"><h2>热门搜索</h2></div>
+          <div class="search-v2-hot-list" id="hot-search-tags">
+            <button class="search-v2-hot" type="button" onclick="setSearchKw('土货特产')"><span class="search-v2-hot-icon"><span class="material-symbols-outlined" aria-hidden="true">storefront</span></span><span class="search-v2-hot-copy"><span class="search-v2-hot-name">土货特产</span><span class="search-v2-hot-sub">当地特色、农家土货</span></span><span class="material-symbols-outlined" aria-hidden="true">chevron_right</span></button>
+            <button class="search-v2-hot" type="button" onclick="setSearchKw('庙会')"><span class="search-v2-hot-icon"><span class="material-symbols-outlined" aria-hidden="true">hotel_class</span></span><span class="search-v2-hot-copy"><span class="search-v2-hot-name">古城庙会</span><span class="search-v2-hot-sub">传统庙会、民俗市集</span></span><span class="material-symbols-outlined" aria-hidden="true">chevron_right</span></button>
+            <button class="search-v2-hot" type="button" onclick="setSearchKw('宠物市场')"><span class="search-v2-hot-icon"><span class="material-symbols-outlined" aria-hidden="true">favorite</span></span><span class="search-v2-hot-copy"><span class="search-v2-hot-name">宠物市场</span><span class="search-v2-hot-sub">花鸟鱼虫、宠物交易</span></span><span class="material-symbols-outlined" aria-hidden="true">chevron_right</span></button>
+            <button class="search-v2-hot" type="button" onclick="setSearchKw('夜市')"><span class="search-v2-hot-icon"><span class="material-symbols-outlined" aria-hidden="true">location_on</span></span><span class="search-v2-hot-copy"><span class="search-v2-hot-name">当地夜市</span><span class="search-v2-hot-sub">晚间营业、小吃与市集</span></span><span class="material-symbols-outlined" aria-hidden="true">chevron_right</span></button>
           </div>
-
-          <!-- 搜索结果列表 -->
-
-          <div id="search-result-list" class="hidden" style="padding:10px 14px;"></div>
-
+          <p class="search-v2-note">支持按名称、县区乡镇、集市类型和“土货特产”等标签搜索。</p>
         </div>
 
-      </div>
+        <div id="search-result-list" class="hidden" aria-live="polite"></div>
+      </section>
 
 
 
@@ -7919,6 +7901,10 @@ function _updateCategoryList(cats) {
     setTimeout(applyDetailV2PreviewState, 0);
     return;
   }
+  if (['search','search-results'].includes(homePreviewMode)) {
+    setTimeout(applySearchV2PreviewState, 0);
+    return;
+  }
   if (['region-search','trigger-login','trigger-reminder','trigger-navigation'].includes(homePreviewMode)) {
     setTimeout(applyTriggerV2PreviewState, 0);
     return;
@@ -8066,6 +8052,8 @@ function switchAdmin(p,el){
 function switchUserPage(p){
 
   if (p !== 'nearby') document.body.classList.remove('map-v2-active');
+
+  document.body.classList.remove('search-v2-active');
 
   document.body.classList.toggle('account-v2-active',['fav','my'].includes(p));
 
@@ -9105,15 +9093,41 @@ let searchCat = '全部';
 
 let searchHistory = JSON.parse(localStorage.getItem('zjsSearchHistory') || '[]');
 
+let searchResultsV2 = [];
+
+let previousSearchPageV2 = 'home';
+
+let previousSearchWasMapV2 = false;
+
+
+
+function _visibleUserPageNameV2() {
+
+  const page = [...document.querySelectorAll('[id^="user-page-"]')].find(item =>
+
+    !item.classList.contains('hidden') && getComputedStyle(item).display !== 'none'
+
+  );
+
+  return page?.id?.replace('user-page-', '') || 'home';
+
+}
+
 
 
 function openSearchPage() {
 
-  // 显示搜索页
+  previousSearchPageV2 = _visibleUserPageNameV2();
+
+  if (previousSearchPageV2 === 'search') previousSearchPageV2 = 'home';
+
+  previousSearchWasMapV2 = document.body.classList.contains('map-v2-active');
+
+  document.body.classList.remove('map-v2-active');
+
+  document.body.classList.add('search-v2-active');
 
   document.querySelectorAll('[id^="user-page-"]').forEach(x => {
-
-    x.style.display = 'none';
 
     x.classList.add('hidden');
 
@@ -9123,23 +9137,42 @@ function openSearchPage() {
 
   if (sp) {
 
-    sp.style.display = 'flex';
+
+    sp.style.removeProperty('display');
 
     sp.classList.remove('hidden');
 
   }
 
+  const scroller = document.querySelector('.user-scroll-body');
+
+  if (scroller) scroller.scrollTop = 0;
+
+  searchCat = '全部';
+
+  document.querySelectorAll('.search-v2-category').forEach(btn =>
+
+    btn.classList.toggle('active', btn.dataset.cat === '全部')
+
+  );
+
+  const inp = document.getElementById('search-main-input');
+
+  if (inp) inp.value = '';
+
+  doGlobalSearch('');
+
+  renderSearchHistory();
+
+  history.pushState({ page: 'search' }, '');
+
   // 聚焦搜索框
 
   setTimeout(() => {
 
-    const inp = document.getElementById('search-main-input');
-
     if (inp) inp.focus();
 
-  }, 100);
-
-  renderSearchHistory();
+  }, 80);
 
 }
 
@@ -9147,21 +9180,78 @@ function openSearchPage() {
 
 function closeSearchPage() {
 
-  switchUserPage('home');
+  document.body.classList.remove('search-v2-active');
+
+  if (previousSearchPageV2 === 'nearby' || previousSearchWasMapV2) {
+
+    switchUserPage('nearby');
+
+    document.body.classList.add('map-v2-active');
+
+    if (typeof initMapV2 === 'function') initMapV2();
+
+    return;
+
+  }
+
+  switchUserPage(previousSearchPageV2 || 'home');
 
 }
 
 
 
-function clearSearch() {
+function _setSearchClearV2(visible) {
+
+  document.getElementById('search-v2-clear')?.classList.toggle('show', visible);
+
+}
+
+
+
+function clearSearch(focus = true) {
 
   const inp = document.getElementById('search-main-input');
 
-  if (inp) { inp.value = ''; inp.focus(); }
+
+  if (inp) inp.value = '';
+
+  searchCat = '全部';
+
+  document.querySelectorAll('.search-v2-category').forEach(btn =>
+
+    btn.classList.toggle('active', btn.dataset.cat === '全部')
+
+  );
 
   document.getElementById('search-empty-state').classList.remove('hidden');
 
   document.getElementById('search-result-list').classList.add('hidden');
+
+  _setSearchClearV2(false);
+
+  renderSearchHistory();
+
+  if (focus) inp?.focus();
+
+}
+
+
+
+function commitGlobalSearch() {
+
+  const kw = document.getElementById('search-main-input')?.value.trim() || '';
+
+  if (kw) {
+
+    searchHistory = [kw, ...searchHistory.filter(item => item !== kw)].slice(0, 10);
+
+    localStorage.setItem('zjsSearchHistory', JSON.stringify(searchHistory));
+
+    renderSearchHistory();
+
+  }
+
+  doGlobalSearch(kw);
 
 }
 
@@ -9173,7 +9263,7 @@ function setSearchKw(kw) {
 
   if (inp) inp.value = kw;
 
-  doGlobalSearch(kw);
+  commitGlobalSearch();
 
 }
 
@@ -9183,15 +9273,17 @@ function setSearchCat(cat, btn) {
 
   searchCat = cat;
 
-  document.querySelectorAll('.search-cat-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.search-v2-category').forEach(b =>
 
-  btn.classList.add('active');
+    b.classList.toggle('active', b === btn)
+
+  );
 
   const inp = document.getElementById('search-main-input');
 
   const kw  = inp ? inp.value.trim() : '';
 
-  if (kw || cat !== '全部') doGlobalSearch(kw);
+  doGlobalSearch(kw);
 
 }
 
@@ -9203,11 +9295,15 @@ function renderSearchHistory() {
 
   const empty = document.getElementById('search-history-empty');
 
+  const clear = document.getElementById('search-v2-clear-history');
+
   if (!wrap) return;
 
   if (!searchHistory.length) {
 
     if (empty) empty.style.display = '';
+
+    if (clear) clear.style.visibility = 'hidden';
 
     wrap.innerHTML = '';
 
@@ -9217,19 +9313,27 @@ function renderSearchHistory() {
 
   if (empty) empty.style.display = 'none';
 
-  wrap.innerHTML = searchHistory.slice(0, 10).map(h =>
+  if (clear) clear.style.visibility = 'visible';
 
-    `<span class="hot-tag" style="display:flex;align-items:center;gap:4px;" onclick="setSearchKw('${h}')">
+  wrap.innerHTML = searchHistory.slice(0, 10).map(item => {
 
-      🕐 ${h}
+    const encoded = _homeEscape(encodeURIComponent(item));
 
-      <span onclick="event.stopPropagation();removeSearchHistory('${h}')"
+    return `<span class="search-v2-history-chip" data-keyword="${encoded}"><button class="search-v2-history-open" type="button" onclick="setSearchKw(decodeURIComponent(this.parentElement.dataset.keyword))"><span class="material-symbols-outlined" aria-hidden="true">search</span><span>${_homeEscape(item)}</span></button><button class="search-v2-history-remove" type="button" aria-label="删除${_homeEscape(item)}" onclick="removeSearchHistory(decodeURIComponent(this.parentElement.dataset.keyword))"><span class="material-symbols-outlined" aria-hidden="true">close</span></button></span>`;
 
-            style="color:var(--gray);margin-left:2px;">✕</span>
+  }).join('');
 
-    </span>`
+}
 
-  ).join('');
+
+
+function clearSearchHistory() {
+
+  searchHistory = [];
+
+  localStorage.setItem('zjsSearchHistory', '[]');
+
+  renderSearchHistory();
 
 }
 
@@ -9247,6 +9351,74 @@ function removeSearchHistory(kw) {
 
 
 
+function _searchDistanceTextV2(market) {
+
+  const meters = market.distanceMeters ?? market.distance_meters;
+
+  if (meters !== undefined && meters !== null && meters !== '') return formatDistanceMeters(meters);
+
+  if (market.dist !== undefined && market.dist !== null && market.dist !== '') {
+
+    const numeric = Number(market.dist);
+
+    return Number.isFinite(numeric) ? `${numeric.toFixed(1).replace(/\.0$/, '')} km` : String(market.dist);
+
+  }
+
+  return market.region || '查看详情';
+
+}
+
+
+
+function renderSearchResultsV2(results, kw = '') {
+
+  const resultList = document.getElementById('search-result-list');
+
+  if (!resultList) return;
+
+  if (!results.length) {
+
+    searchResultsV2 = [];
+
+    resultList.innerHTML = `<div class="search-v2-no-result"><div class="search-v2-no-result-icon"><span class="material-symbols-outlined" aria-hidden="true">search</span></div><strong>未找到相关集市</strong><p>试试县区、乡镇名称，或切换集市分类</p></div>`;
+
+    return;
+
+  }
+
+  const visible = results.slice(0, 50);
+
+  searchResultsV2 = visible;
+
+  resultList.innerHTML = `<div class="search-v2-result-head"><span>找到 <strong>${results.length}</strong> 个集市</span><span>${results.length > 50 ? '先显示前 50 个' : (kw ? `“${_homeEscape(kw)}”` : '')}</span></div><div class="search-v2-result-list">${visible.map((market, index) => {
+
+    const status = _homeStatusMeta(market);
+
+    const rating = _homeRatingText(market);
+
+    return `<button class="search-v2-card" type="button" onclick="openSearchResultV2(${index})"><span class="search-v2-card-top"><span class="search-v2-card-status ${_homeEscape(status.cls)}">${_homeEscape(status.label)}</span><span class="search-v2-card-distance">${_homeEscape(_searchDistanceTextV2(market))}</span></span><span class="search-v2-card-name">${_homeEscape(_homeMarketDisplayName(market))}</span><span class="search-v2-card-bottom"><span class="search-v2-card-schedule">${_homeEscape(_homeScheduleText(market))}</span><span class="search-v2-card-rating${rating === '暂无评价' ? ' empty' : ''}">${_homeEscape(rating)}</span></span></button>`;
+
+  }).join('')}</div>`;
+
+}
+
+
+
+function openSearchResultV2(index) {
+
+  const market = searchResultsV2[index];
+
+  if (!market) return;
+
+  openMarketDetail(market);
+
+  document.body.classList.remove('search-v2-active');
+
+}
+
+
+
 function doGlobalSearch(kw) {
 
   kw = (kw || '').trim();
@@ -9256,6 +9428,8 @@ function doGlobalSearch(kw) {
   const resultList  = document.getElementById('search-result-list');
 
   if (!resultList) return;
+
+  _setSearchClearV2(Boolean(kw));
 
 
 
@@ -9277,29 +9451,19 @@ function doGlobalSearch(kw) {
 
 
 
-  // 保存搜索历史
-
-  if (kw && kw.length > 0) {
-
-    searchHistory = [kw, ...searchHistory.filter(h => h !== kw)].slice(0, 20);
-
-    localStorage.setItem('zjsSearchHistory', JSON.stringify(searchHistory));
-
-  }
-
-
-
   // 搜索逻辑
 
   let results = MARKETS.filter(m => {
 
-    const kwMatch = !kw || [m.name, m.addr, m.region, ...(m.tags||[])].some(
+    const tagFields = Array.isArray(m.tags) ? m.tags : (m.tags ? [m.tags] : []);
 
-      field => field && field.toLowerCase().includes(kw.toLowerCase())
+    const kwMatch = !kw || [m.name, m.addr, m.address, m.region, m.cat, m.category, ...tagFields].some(
+
+      field => field && String(field).toLowerCase().includes(kw.toLowerCase())
 
     );
 
-    const catMatch = searchCat === '全部' || m.cat === searchCat;
+    const catMatch = searchCat === '全部' || _homePrimaryCategory(m) === searchCat;
 
     return kwMatch && catMatch;
 
@@ -9307,91 +9471,75 @@ function doGlobalSearch(kw) {
 
 
 
-  const kwDisplay = kw || '全部';
+  renderSearchResultsV2(results, kw);
 
-  const catDisplay = searchCat !== '全部' ? ` · ${searchCat}` : '';
+}
 
 
 
-  if (!results.length) {
+function applySearchV2PreviewState() {
 
-    resultList.innerHTML = `<div class="search-no-result">
+  const mode = new URLSearchParams(location.search).get('preview');
 
-      <div style="font-size:40px;margin-bottom:12px;">🔍</div>
+  if (!['search', 'search-results'].includes(mode)) return false;
 
-      <div style="font-size:14px;font-weight:600;margin-bottom:6px;">未找到相关集市</div>
+  document.body.classList.add('home-preview', 'search-v2-active');
 
-      <div style="font-size:12px;">换个关键词试试吧</div>
+  showScreen('user-screen');
 
-    </div>`;
+  document.querySelectorAll('[id^="user-page-"]').forEach(page => page.classList.add('hidden'));
 
-    return;
+  const page = document.getElementById('user-page-search');
+
+  page?.style.removeProperty('display');
+
+  page?.classList.remove('hidden');
+
+  const time = document.getElementById('home-preview-time');
+
+  if (time) time.textContent = '09:26';
+
+  searchCat = '全部';
+
+  searchHistory = ['土货特产', '古城庙会'];
+
+  renderSearchHistory();
+
+  const inp = document.getElementById('search-main-input');
+
+  if (mode === 'search-results') {
+
+    if (inp) inp.value = '大集';
+
+    document.getElementById('search-empty-state')?.classList.add('hidden');
+
+    document.getElementById('search-result-list')?.classList.remove('hidden');
+
+    _setSearchClearV2(true);
+
+    renderSearchResultsV2([
+
+      {id:'search-li-guan',name:'李官大集',cat:'农村大集',region:'山东省·临沂市·兰山区',addr:'李官镇驻地',distanceMeters:2800,statusLabel:'明天开集',scheduleStatus:'tomorrow',homeScheduleText:'阴历逢一、逢六',rating:4.8,reviewCount:126,tags:['土货特产']},
+
+      {id:'search-yizhou',name:'沂州古城庙会',cat:'庙会',region:'山东省·临沂市·兰山区',addr:'沂州古城',distanceMeters:9100,statusLabel:'明天开集',scheduleStatus:'tomorrow',homeScheduleText:'指定日期 · 7月14日、10月2日',homeRatingText:'暂无评价',tags:['当地特色']},
+
+      {id:'search-zaogoutou',name:'枣沟头早市',cat:'早市',region:'山东省·临沂市·兰山区',addr:'枣沟头镇',distanceMeters:650,statusLabel:'每日营业',scheduleStatus:'daily',homeScheduleText:'每日营业 · 特殊通知除外',rating:4.6,reviewCount:38,tags:['早市']}
+
+    ], '大集');
+
+  } else {
+
+    if (inp) inp.value = '';
+
+    document.getElementById('search-empty-state')?.classList.remove('hidden');
+
+    document.getElementById('search-result-list')?.classList.add('hidden');
+
+    _setSearchClearV2(false);
 
   }
 
-
-
-  resultList.innerHTML = `
-
-    <div style="font-size:12px;color:var(--gray);margin-bottom:12px;">
-
-      找到 <strong style="color:var(--red);">${results.length}</strong> 个集市
-
-      ${kw ? `· 关键词「${kw}」` : ''}${catDisplay}
-
-    </div>
-
-    ${results.map(m => {
-
-      const kws = kw.toLowerCase();
-
-      const highlight = (str) => !str ? '' : str.replace(
-
-        new RegExp(kw.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'gi'),
-
-        match => `<em style="color:var(--red);font-style:normal;">${match}</em>`
-
-      );
-
-      return `<div class="search-result-card" onclick="openMarketDetail(MARKETS.find(x=>x.id==${m.id}||x.name==='${m.name.replace(/'/g,"\'")}'))">
-
-        <div style="width:50px;height:50px;border-radius:10px;background:${m.bg||'var(--paper-dark)'};
-
-                    display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">
-
-          ${m.icon}
-
-        </div>
-
-        <div style="flex:1;min-width:0;">
-
-          <div style="font-size:14px;font-weight:700;margin-bottom:3px;">${highlight(m.name)}</div>
-
-          <div style="font-size:12px;color:var(--gray);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-
-            📍 ${highlight(m.addr||'')}
-
-          </div>
-
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-
-            <span style="font-size:11px;background:rgba(200,57,43,.08);color:var(--red);
-
-                         border-radius:8px;padding:2px 7px;">${m.cat}</span>
-
-            <span style="font-size:11px;color:var(--gray);">⏰ ${formatScheduleTag(m.openTime||m.time)||''}</span>
-
-            ${m.rating?`<span style="font-size:11px;color:var(--gold);">⭐ ${m.rating}</span>`:'<span style="font-size:10px;color:#bbb;">暂无评分</span>'}
-
-          </div>
-
-        </div>
-
-        <div style="font-size:20px;color:var(--gray);flex-shrink:0;">›</div>
-
-      </div>`;
-
-    }).join('')}`;
+  return true;
 
 }
 
@@ -14641,11 +14789,9 @@ let _detailFromPage = 'home';
 
 function _getActivePage() {
 
-  // 搜索页用 display 控制，单独检测
-
   const sp = document.getElementById('user-page-search');
 
-  if (sp && sp.style.display !== 'none' && sp.style.display !== '') return 'search';
+  if (sp && !sp.classList.contains('hidden')) return 'search';
 
   for (const p of ['nearby','my','fav','publish','home']) {
 
@@ -14665,13 +14811,13 @@ function closeDetail() {
 
   if (_detailFromPage === 'search') {
 
-    // 还原搜索页（搜索页用 display 而非 hidden class 控制）
-
     document.querySelectorAll('[id^="user-page-"]').forEach(x => { x.classList.add('hidden'); });
 
     const sp = document.getElementById('user-page-search');
 
-    if (sp) { sp.classList.remove('hidden'); sp.style.display = 'flex'; }
+    if (sp) { sp.classList.remove('hidden'); sp.style.removeProperty('display'); }
+
+    document.body.classList.add('search-v2-active');
 
     ['home','nearby','publish','fav','my'].forEach(n => {
 
@@ -14790,7 +14936,7 @@ async function openMarketDetail(market) {
 
   const tagsEl = document.getElementById('detail-tags');
 
-  if(tagsEl) tagsEl.innerHTML = market.tags.map(t=>`<span class="tag">${t}</span>`).join('');
+  if(tagsEl) tagsEl.innerHTML = (Array.isArray(market.tags) ? market.tags : []).map(t=>`<span class="tag">${t}</span>`).join('');
 
   setText('wr-market-icon', market.icon);
 
@@ -18221,7 +18367,7 @@ function showToast(msg,type){
 
     const searchPage = document.getElementById('user-page-search');
 
-    if (searchPage && searchPage.style.display !== 'none') {
+    if (searchPage && !searchPage.classList.contains('hidden')) {
 
       if (typeof closeSearchPage === 'function') closeSearchPage();
 
