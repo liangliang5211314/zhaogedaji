@@ -70,6 +70,16 @@
 - 排序规则：首页请求固定使用 `sort=distance`；“今日有集”横幅只作筛选引导，不向第一页插入远距离集市。
 - 375px 归档：`output/frontend-infinite-scroll/home-after-3-pages-375.png`；原始真机截图：`output/frontend-infinite-scroll/home-after-3-pages-device.png`。
 
+## 定位状态统一回归（2026-07-15）
+
+- 单一来源：`zjsLocationState = {gpsRegion, manualRegion, effectiveRegion}`；`effectiveRegion` 固定为手动地区优先、GPS 地区其次，旧 `zjsSelectedRegion` 仅迁移一次后删除。
+- 冷启动拒绝：在全新本地域名、无历史状态下拒绝定位，首页进入定位失败态；首页显示“未定位”、地图显示“选择地区”、地区搜索显示“未定位”、“我的”显示“未定位 · 点击选择”，最近访问区块隐藏。
+- 授权定位：用高德逆地理结构 `city=保定市, district=唐县` 回归，四处同步显示“保定市 · 唐县”，并提示“已定位到 保定市 · 唐县”；GPS 地区自动写入最近访问。
+- 手动切换：从地区搜索页选择“石家庄市 · 正定县”后，四处同步且最近访问按“石家庄市 · 正定县、保定市 · 唐县”排列；首页停止 GPS 分页，改按手动地区展示。
+- 手动锁定：随后 GPS 更新为“邢台市 · 信都区”，`gpsRegion` 正常更新并进入历史，但 `effectiveRegion` 与四处显示仍保持“石家庄市 · 正定县”；刷新页面后手动地区仍保留。
+- 历史规则：重复地区移动到首位，始终去重，加入第 6 个地区后仍只保留最新 5 条；首页定位失败态和地区搜索页使用同一列表。
+- 375px 真机归档：`output/frontend-location-state/my-region-375.png`、`output/frontend-location-state/region-search-375.png`、`output/frontend-location-state/my-location-denied-375.png`。
+
 ## final result
 
 passed

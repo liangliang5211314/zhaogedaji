@@ -2548,7 +2548,7 @@ body:not(.account-v2-active) .home-v2-nav .bottom-nav-item.active .material-symb
       <div class="home-v2-title-row">
         <div class="home-v2-logo">找个大集</div>
         <button class="home-v2-location" type="button" onclick="openLocationModal()" aria-label="切换当前区县">
-          <span class="home-v2-location-name" id="loc-name-display">临沂市兰山区</span>
+          <span class="home-v2-location-name" id="loc-name-display">未定位</span>
           <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
         </button>
       </div>
@@ -2621,12 +2621,8 @@ body:not(.account-v2-active) .home-v2-nav .bottom-nav-item.active .material-symb
             <span class="material-symbols-outlined" aria-hidden="true">search</span>
             <span>搜索城市、区县或乡镇</span>
           </button>
-          <h3 class="home-state-subtitle">最近访问</h3>
-          <div class="home-recent-regions" aria-label="最近访问地区">
-            <button class="home-recent-region" type="button" onclick="openLocationModal()">临沂市</button>
-            <button class="home-recent-region" type="button" onclick="openLocationModal()">青岛市</button>
-            <button class="home-recent-region" type="button" onclick="openLocationModal()">淄博市</button>
-          </div>
+          <h3 class="home-state-subtitle hidden" id="home-recent-title">最近访问</h3>
+          <div class="home-recent-regions hidden" id="home-recent-regions" aria-label="最近访问地区"></div>
           <div class="home-permission-tip">
             <span class="material-symbols-outlined" aria-hidden="true">info</span>
             <span>允许定位后，才能按实际距离推荐附近集市</span>
@@ -2665,9 +2661,9 @@ body:not(.account-v2-active) .home-v2-nav .bottom-nav-item.active .material-symb
       <section id="user-page-region-v2" class="hidden region-v2-page" aria-labelledby="region-v2-title">
         <header class="region-v2-header"><button class="region-v2-back" type="button" onclick="closeRegionSearchV2()" aria-label="返回"><span class="material-symbols-outlined" aria-hidden="true">chevron_left</span></button><h1 id="region-v2-title">选择地区</h1></header>
         <label class="region-v2-search"><span class="material-symbols-outlined" aria-hidden="true">search</span><input id="region-v2-input" type="search" placeholder="搜索城市、区县或乡镇" oninput="filterRegionV2(this.value)"></label>
-        <section class="region-v2-current"><div class="region-v2-current-icon"><span class="material-symbols-outlined" aria-hidden="true">my_location</span></div><div class="region-v2-current-copy"><div class="region-v2-current-label">当前定位</div><div class="region-v2-current-name" id="region-v2-current-name">临沂市 · 兰山区</div></div><button class="region-v2-relocate" type="button" onclick="doLocate();showToast('正在重新定位')">重新定位</button></section>
-        <h2 class="region-v2-block-title">最近访问</h2>
-        <div class="region-v2-recents"><button class="region-v2-recent" type="button" onclick="selectRegionV2('临沂市 · 兰山区')">临沂市 · 兰山区</button><button class="region-v2-recent" type="button" onclick="selectRegionV2('日照市 · 东港区')">日照市 · 东港区</button></div>
+        <section class="region-v2-current"><div class="region-v2-current-icon"><span class="material-symbols-outlined" aria-hidden="true">my_location</span></div><div class="region-v2-current-copy"><div class="region-v2-current-label">当前定位</div><div class="region-v2-current-name" id="region-v2-current-name">未定位</div></div><button class="region-v2-relocate" type="button" onclick="doLocate();showToast('正在重新定位')">重新定位</button></section>
+        <h2 class="region-v2-block-title hidden" id="region-v2-recent-title">最近访问</h2>
+        <div class="region-v2-recents hidden" id="region-v2-recents"></div>
         <h2 class="region-v2-block-title">旅行热门地区</h2><p class="region-v2-subtitle">按当地大集、庙会与特色市场活跃度推荐</p>
         <div class="region-v2-hot-list" id="region-v2-hot-list">
           <button class="region-v2-hot" type="button" data-search="山东 青州市 古城早市 花卉大集" onclick="selectRegionV2('山东 · 青州市')"><span class="region-v2-dot"></span><span class="region-v2-hot-copy"><span class="region-v2-hot-name">山东 · 青州市</span><span class="region-v2-hot-tags">古城早市、花卉大集</span></span><span class="region-v2-count">12 个集市</span></button>
@@ -3562,7 +3558,7 @@ body:not(.account-v2-active) .home-v2-nav .bottom-nav-item.active .material-symb
             </button>
             <button class="my-v2-row" type="button" onclick="openRegionSearchV2()">
               <span class="my-v2-row-icon gold"><span class="material-symbols-outlined" aria-hidden="true">location_on</span></span>
-              <span class="my-v2-row-body"><span class="my-v2-row-copy"><strong>地区与定位</strong><span id="my-v2-region-label">临沂市 · 兰山区</span></span><span class="my-v2-row-end"><span class="material-symbols-outlined" aria-hidden="true">chevron_right</span></span></span>
+              <span class="my-v2-row-body"><span class="my-v2-row-copy"><strong>地区与定位</strong><span id="my-v2-region-label">未定位 · 点击选择</span></span><span class="my-v2-row-end"><span class="material-symbols-outlined" aria-hidden="true">chevron_right</span></span></span>
             </button>
           </section>
 
@@ -4411,6 +4407,135 @@ let showMarketSection = false;  // 后台控制是否显示市场区块
 
 
 let selectedRegion = '全部地区';
+
+const LOCATION_STATE_KEY = 'zjsLocationState';
+const RECENT_REGIONS_KEY = 'zjsRecentRegions';
+
+function normalizeLocationRegion(value) {
+  const parts = String(value || '').split('·').map(part => part.trim()).filter(Boolean);
+  return parts.length ? parts.join('·') : null;
+}
+
+function loadLocationState() {
+  let stored = null;
+  try { stored = JSON.parse(localStorage.getItem(LOCATION_STATE_KEY) || 'null'); } catch (error) {}
+  const legacyManual = normalizeLocationRegion(localStorage.getItem('zjsSelectedRegion'));
+  const gpsRegion = normalizeLocationRegion(stored?.gpsRegion);
+  const manualRegion = normalizeLocationRegion(stored?.manualRegion) || legacyManual;
+  try { localStorage.removeItem('zjsSelectedRegion'); } catch (error) {}
+  return {gpsRegion, manualRegion, effectiveRegion:manualRegion || gpsRegion || null};
+}
+
+function loadRecentRegions() {
+  try {
+    const items = JSON.parse(localStorage.getItem(RECENT_REGIONS_KEY) || '[]');
+    if (!Array.isArray(items)) return [];
+    return [...new Set(items.map(normalizeLocationRegion).filter(Boolean))].slice(0,5);
+  } catch (error) { return []; }
+}
+
+const locationState = loadLocationState();
+let zjsRecentRegions = loadRecentRegions();
+
+function displayLocationRegion(region) {
+  return normalizeLocationRegion(region)?.replaceAll('·',' · ') || '';
+}
+
+function persistLocationState() {
+  locationState.effectiveRegion = locationState.manualRegion || locationState.gpsRegion || null;
+  try {
+    localStorage.setItem(LOCATION_STATE_KEY, JSON.stringify({
+      gpsRegion:locationState.gpsRegion,
+      manualRegion:locationState.manualRegion,
+      effectiveRegion:locationState.effectiveRegion
+    }));
+  } catch (error) {}
+}
+
+function renderRecentRegions() {
+  const homeTitle = document.getElementById('home-recent-title');
+  const homeList = document.getElementById('home-recent-regions');
+  const regionTitle = document.getElementById('region-v2-recent-title');
+  const regionList = document.getElementById('region-v2-recents');
+  const visible = zjsRecentRegions.length > 0;
+  [homeTitle,homeList,regionTitle,regionList].forEach(element => element?.classList.toggle('hidden',!visible));
+  const buttons = className => zjsRecentRegions.map(region =>
+    `<button class="${className}" type="button" data-location-region="${escapeLocationHtml(region)}">${escapeLocationHtml(displayLocationRegion(region))}</button>`
+  ).join('');
+  if (homeList) {
+    homeList.innerHTML = buttons('home-recent-region');
+    homeList.querySelectorAll('[data-location-region]').forEach(button => button.addEventListener('click',()=>selectRegionV2(button.dataset.locationRegion)));
+  }
+  if (regionList) {
+    regionList.innerHTML = buttons('region-v2-recent');
+    regionList.querySelectorAll('[data-location-region]').forEach(button => button.addEventListener('click',()=>selectRegionV2(button.dataset.locationRegion)));
+  }
+}
+
+function escapeLocationHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+}
+
+function renderLocationState() {
+  locationState.effectiveRegion = locationState.manualRegion || locationState.gpsRegion || null;
+  const region = displayLocationRegion(locationState.effectiveRegion);
+  selectedRegion = locationState.effectiveRegion?.split('·').at(-1) || '全部地区';
+  const homeLabel = document.getElementById('loc-name-display');
+  const mapLabel = document.querySelector('.map-v2-filter-place span:first-child');
+  const searchLabel = document.getElementById('region-v2-current-name');
+  const myLabel = document.getElementById('my-v2-region-label');
+  if (homeLabel && !document.body.classList.contains('home-preview')) homeLabel.textContent = region || '未定位';
+  if (mapLabel) mapLabel.textContent = region || '选择地区';
+  if (searchLabel) searchLabel.textContent = region || '未定位';
+  if (myLabel) myLabel.textContent = region || '未定位 · 点击选择';
+  renderRecentRegions();
+}
+
+function addRecentRegion(region) {
+  const normalized = normalizeLocationRegion(region);
+  if (!normalized) return;
+  zjsRecentRegions = [normalized,...zjsRecentRegions.filter(item => item !== normalized)].slice(0,5);
+  try { localStorage.setItem(RECENT_REGIONS_KEY,JSON.stringify(zjsRecentRegions)); } catch (error) {}
+  renderRecentRegions();
+}
+
+function setGpsRegion(region) {
+  locationState.gpsRegion = normalizeLocationRegion(region);
+  persistLocationState();
+  if (locationState.gpsRegion) addRecentRegion(locationState.gpsRegion);
+  renderLocationState();
+}
+
+function setManualRegion(region) {
+  locationState.manualRegion = normalizeLocationRegion(region);
+  persistLocationState();
+  if (locationState.manualRegion) addRecentRegion(locationState.manualRegion);
+  renderLocationState();
+}
+
+function hasManualRegion() {
+  return !!locationState.manualRegion;
+}
+
+function locationRegionFromAddress(addressComponent, fallbackLabel='') {
+  const component = addressComponent || {};
+  const read = value => Array.isArray(value) ? String(value[0] || '') : String(value || '');
+  const province = read(component.province).trim();
+  let city = read(component.city).trim();
+  const district = read(component.district).trim();
+  if (!city && /^(北京市|上海市|天津市|重庆市)$/.test(province)) city = province;
+  if (!city && district.endsWith('市')) return normalizeLocationRegion(district);
+  if (city && district && city !== district) return normalizeLocationRegion(`${city}·${district}`);
+  if (city) return normalizeLocationRegion(city);
+  const compact = String(fallbackLabel || '').replace(/[·\s]/g,'');
+  const fallbackCity = compact.match(/([^省市区县乡镇街道路]{2,12}市)/)?.[1] || '';
+  const fallbackDistrict = compact.match(/([^省市区县乡镇街道路]{1,12}(?:区|县))/)?.[1] || '';
+  if (fallbackCity && fallbackDistrict) return normalizeLocationRegion(`${fallbackCity}·${fallbackDistrict}`);
+  return normalizeLocationRegion(fallbackCity || fallbackDistrict);
+}
+
+persistLocationState();
+renderLocationState();
 
 let homeRenderLimit = 40;
 
@@ -7330,10 +7455,7 @@ function _updateCategoryList(cats) {
     document.body.classList.add('region-v2-active');
     document.querySelectorAll('[id^="user-page-"]').forEach(page => page.classList.add('hidden'));
     document.getElementById('user-page-region-v2')?.classList.remove('hidden');
-    const current = target === 'publish'
-      ? document.getElementById('pub-region-text')?.textContent || '请选择区县'
-      : document.getElementById('loc-name-display')?.textContent || '临沂市 · 兰山区';
-    setText('region-v2-current-name',current.replace(/市(?=[^·])/,'市 · '));
+    renderLocationState();
     document.querySelector('.user-scroll-body')?.scrollTo?.({top:0});
     loadPopularRegionsV2();
   };
@@ -7361,11 +7483,7 @@ function _updateCategoryList(cats) {
       showToast(`已选择${label}`);
       return;
     }
-    selectedRegion = clean.split('·').pop() || clean;
-    const display = document.getElementById('loc-name-display');
-    if (display) display.textContent = clean.replaceAll('·','');
-    updateMapV2Place(clean);
-    localStorage.setItem('zjsSelectedRegion',clean);
+    setManualRegion(clean);
     closeRegionSearchV2();
     renderHomeNearbyForRegion();
     if (typeof renderMyV2 === 'function') renderMyV2();
@@ -7655,13 +7773,13 @@ function _updateCategoryList(cats) {
     const name = preview ? '赶集旅人 2086' : (user?.nickname || '游客');
     setText('my-v2-name',name);
     setText('my-v2-avatar',preview ? '集' : name === '游客' ? '游' : (name.trim().slice(0,1) || '集'));
-    setText('my-v2-login-state',preview ? '微信已登录 · 山东临沂' : user ? `已登录 · ${localStorage.getItem('zjsSelectedRegion') || user.city || '地区待设置'}` : '登录后同步收藏、提醒与评价');
+    const effectiveRegion = displayLocationRegion(locationState.effectiveRegion);
+    setText('my-v2-login-state',preview ? '微信已登录' : user ? `已登录 · ${effectiveRegion || user.city || '地区待设置'}` : '登录后同步收藏、提醒与评价');
     setText('my-v2-fav-stat',`收藏 ${favCount}`);
     setText('my-v2-reminder-stat',`提醒 ${reminderCount}`);
     setText('my-v2-review-stat',`评价 ${reviewCount}`);
     setText('my-v2-map-label',`${mapLabelV2()} · 点击修改`);
-    const region = (localStorage.getItem('zjsSelectedRegion') || '临沂市·兰山区').replaceAll('·',' · ');
-    setText('my-v2-region-label',region);
+    setText('my-v2-region-label',effectiveRegion || '未定位 · 点击选择');
     setText('my-v2-review-label',preview ? '2 条已发布 · 1 条管理员审核中' : `${reviewCount} 条已发布`);
     const large = localStorage.getItem('zjsLargeText') === '1';
     document.body.classList.toggle('large-text-v2',large);
@@ -8299,21 +8417,6 @@ function mapV2FiniteNumber(value){
   return Number.isFinite(number) ? number : null;
 }
 
-function mapV2PlaceLabel(addrLabel){
-  const value = String(addrLabel || '').trim();
-  const matches = [...value.matchAll(/([^省市区县乡镇街道路·\s]{1,12}(?:区|县|市))/g)];
-  if (matches.length) return matches.at(-1)[1];
-  const selected = String(selectedRegion || '').split('·').map(part => part.trim()).filter(Boolean).at(-1);
-  if (selected && selected !== '全部地区') return selected;
-  return mapV2FiniteNumber(userLat) != null && mapV2FiniteNumber(userLng) != null ? '当前位置' : '选择地区';
-}
-
-function updateMapV2Place(addrLabel){
-  const label = mapV2PlaceLabel(addrLabel);
-  const element = document.querySelector('.map-v2-filter-place span:first-child');
-  if (element) element.textContent = label;
-}
-
 function closeMapView(){
   document.body.classList.remove('map-v2-active','map-preview');
   switchUserPage('home');
@@ -8435,7 +8538,7 @@ function selectMapV2Category(button, category){
   mapV2Category = category;
   document.querySelectorAll('.map-v2-chip').forEach(chip => chip.classList.toggle('active', chip === button));
   const preview = new URLSearchParams(location.search).get('preview');
-  if (!['map-default','map-raised'].includes(preview) && isValidPosition(userLat,userLng)) {
+  if (!['map-default','map-raised'].includes(preview) && !hasManualRegion() && isValidPosition(userLat,userLng)) {
     resetNearbyPaging('map',{lat:userLat,lng:userLng,category,todayOnly:mapV2TodayOnly});
     return;
   }
@@ -8446,7 +8549,7 @@ function selectMapV2Category(button, category){
 function filterMapV2Today(checked){
   mapV2TodayOnly = !!checked;
   const preview = new URLSearchParams(location.search).get('preview');
-  if (!['map-default','map-raised'].includes(preview) && isValidPosition(userLat,userLng)) {
+  if (!['map-default','map-raised'].includes(preview) && !hasManualRegion() && isValidPosition(userLat,userLng)) {
     resetNearbyPaging('map',{lat:userLat,lng:userLng,category:mapV2Category,todayOnly:mapV2TodayOnly});
     return;
   }
@@ -8496,7 +8599,7 @@ function initMapV2(){
     nearbyPaging.map.active = false;
     disconnectNearbyObserver('map');
     mapV2Source = MAP_V2_PREVIEW_MARKETS.map(mapV2NormalizeMarket);
-  } else if (isValidPosition(userLat,userLng)) {
+  } else if (!hasManualRegion() && isValidPosition(userLat,userLng)) {
     if (!nearbyPagingContextMatches('map',userLat,userLng,mapV2Category)) {
       resetNearbyPaging('map',{lat:userLat,lng:userLng,category:mapV2Category,todayOnly:mapV2TodayOnly});
     }
@@ -8518,8 +8621,8 @@ function initMapV2(){
     return;
   }
   if (mapV2Instance) mapV2Instance.destroy();
-  const centerLat = mapV2FiniteNumber(userLat) ?? mapV2Source[0]?.lat ?? 35.12;
-  const centerLng = mapV2FiniteNumber(userLng) ?? mapV2Source[0]?.lng ?? 118.34;
+  const centerLat = (hasManualRegion() ? mapV2Source[0]?.lat : mapV2FiniteNumber(userLat)) ?? mapV2Source[0]?.lat ?? 35.12;
+  const centerLng = (hasManualRegion() ? mapV2Source[0]?.lng : mapV2FiniteNumber(userLng)) ?? mapV2Source[0]?.lng ?? 118.34;
   mapV2Instance = new AMap.Map('map-v2-canvas',{zoom:13,center:[centerLng,centerLat],mapStyle:'amap://styles/whitesmoke',viewMode:'2D',showLabel:true});
   renderMapV2Markers();
 }
@@ -8639,10 +8742,10 @@ function setHomeRuntimeState(state, options={}) {
   const locationName = document.getElementById('loc-name-display');
   if (page) page.dataset.homeState = state;
   if (locationButton) locationButton.classList.toggle('is-error', state === 'location-failed');
-  if (locationName && options.locationName) locationName.textContent = options.locationName;
+  if (locationName && options.locationName && document.body.classList.contains('home-preview')) locationName.textContent = options.locationName;
   if (state === 'empty') {
     const summary = document.getElementById('home-empty-location-title');
-    if (summary) summary.textContent = `已定位：${options.locationName || locationName?.textContent || '当前位置'}`;
+    if (summary) summary.textContent = `已定位：${options.locationName || displayLocationRegion(locationState.effectiveRegion) || '当前位置'}`;
   }
 }
 
@@ -8856,7 +8959,7 @@ function updateHomeRecommendationCopy(markets) {
 function selectHomeCategory(button, category) {
   document.querySelectorAll('.home-v2-chip').forEach(chip => chip.classList.toggle('active', chip === button));
   nearbyPaging.home.category = category;
-  if (isValidPosition(userLat,userLng)) {
+  if (!hasManualRegion() && isValidPosition(userLat,userLng)) {
     resetNearbyPaging('home',{lat:userLat,lng:userLng,category,todayOnly:false});
   } else {
     const source = MARKETS.filter(m=>(m.region || '').includes(selectedRegion));
@@ -10102,6 +10205,23 @@ function waitForAmap(callback, maxWait = 8000) {
 
 // ── 主定位入口 ──────────────────────────────────────────────
 
+function onBrowserGeolocation(position, fallbackLabel='浏览器定位') {
+  const lat = position.coords.latitude;
+  const lng = position.coords.longitude;
+  if (!window.AMap) { onLocated(lat,lng,true,fallbackLabel); return; }
+  AMap.plugin('AMap.Geocoder',()=>{
+    const geocoder = new AMap.Geocoder({extensions:'all'});
+    geocoder.getAddress([lng,lat],(status,result)=>{
+      const regeocode = status === 'complete' ? result.regeocode : null;
+      onLocated(
+        lat,lng,true,
+        regeocode?.formattedAddress || fallbackLabel,
+        regeocode?.addressComponent || null
+      );
+    });
+  });
+}
+
 // 静默后台定位（不跳页面，仅更新距离）
 
 function silentLocate() {
@@ -10120,7 +10240,7 @@ function silentLocate() {
 
       navigator.geolocation.getCurrentPosition(
 
-        pos => onLocated(pos.coords.latitude, pos.coords.longitude, true, '当前位置'),
+        pos => onBrowserGeolocation(pos,'当前位置'),
 
         ()  => onLocated(null, null, false, '定位未开启'),
 
@@ -10144,7 +10264,7 @@ function silentLocate() {
 
           const fullAddr = result.formattedAddress || result.addressComponent?.district || result.addressComponent?.city || '当前位置';
 
-          onLocated(result.position.lat, result.position.lng, true, fullAddr);
+          onLocated(result.position.lat, result.position.lng, true, fullAddr, result.addressComponent || null);
 
         } else if (!refreshOnly) { tryBrowser(); }
 
@@ -10209,7 +10329,7 @@ function doLocate() {
 
         navigator.geolocation.getCurrentPosition(
 
-          pos => onLocated(pos.coords.latitude, pos.coords.longitude, true, '浏览器定位'),
+          pos => onBrowserGeolocation(pos),
 
           ()  => onLocated(null, null, false, '定位失败'),
 
@@ -10255,7 +10375,7 @@ function doLocate() {
 
           const addr = result.formattedAddress || result.addressComponent?.city || '';
 
-          onLocated(lat, lng, true, addr || '高德定位成功');
+          onLocated(lat, lng, true, addr || '高德定位成功', result.addressComponent || null);
 
         } else {
 
@@ -10267,7 +10387,7 @@ function doLocate() {
 
             navigator.geolocation.getCurrentPosition(
 
-              pos => onLocated(pos.coords.latitude, pos.coords.longitude, true, '浏览器定位'),
+              pos => onBrowserGeolocation(pos),
 
               ()  => onLocated(null, null, false, '定位失败'),
 
@@ -10421,11 +10541,17 @@ function _checkCityOpen(addrLabel) {
 
 // ── 定位完成回调 ────────────────────────────────────────────
 
-function onLocated(lat, lng, real, addrLabel) {
+function onLocated(lat, lng, real, addrLabel, addressComponent=null) {
 
   isLocating = false;
 
   const located = !!(real && isValidPosition(lat, lng));
+
+  const previousGpsRegion = locationState.gpsRegion;
+
+  const resolvedGpsRegion = located
+    ? locationRegionFromAddress(addressComponent,addrLabel) || previousGpsRegion
+    : null;
 
   hasLocation = located;
 
@@ -10449,30 +10575,33 @@ function onLocated(lat, lng, real, addrLabel) {
 
 
 
-  const nameEl = document.getElementById('loc-name-display');
-
-  // 只取地址最后一段显示（如"尚玉园礼苑"），最多10字，保持顶部紧凑
-  function _shortAddr(full) {
-    if (!full) return '已定位';
-    const parts = full.split(/[省市区县乡镇路街道]/);
-    const last = parts.filter(p=>p.trim()).pop() || full;
-    return last.length > 10 ? last.slice(-10) : last;
-  }
-  if (nameEl) nameEl.textContent = located ? _shortAddr(addrLabel) : '全部地区';
-  updateMapV2Place(located ? addrLabel : selectedRegion);
+  setGpsRegion(resolvedGpsRegion);
 
   if (located) {
     setHomeRuntimeState('list');
-    _setHomeLocationStatus(
-      addrLabel || '已获取当前位置',
-      '已按实际距离推荐附近集市',
-      true
-    );
-    loadHomeNearby(userLat, userLng);
-    if (document.body.classList.contains('map-v2-active')) {
-      resetNearbyPaging('map',{
-        lat:userLat,lng:userLng,category:mapV2Category,todayOnly:mapV2TodayOnly
-      });
+    if (hasManualRegion()) {
+      _setHomeLocationStatus(
+        `已选择 ${displayLocationRegion(locationState.effectiveRegion)}`,
+        'GPS 已更新，仍按手动地区显示集市',
+        true
+      );
+      renderHomeNearbyForRegion();
+      if (document.body.classList.contains('map-v2-active')) initMapV2();
+    } else {
+      _setHomeLocationStatus(
+        displayLocationRegion(locationState.effectiveRegion) || addrLabel || '已获取当前位置',
+        '已按实际距离推荐附近集市',
+        true
+      );
+      loadHomeNearby(userLat, userLng);
+      if (document.body.classList.contains('map-v2-active')) {
+        resetNearbyPaging('map',{
+          lat:userLat,lng:userLng,category:mapV2Category,todayOnly:mapV2TodayOnly
+        });
+      }
+      if (resolvedGpsRegion && resolvedGpsRegion !== previousGpsRegion) {
+        showToast(`已定位到 ${displayLocationRegion(resolvedGpsRegion)}`);
+      }
     }
   } else {
     _setHomeLocationStatus(
@@ -10490,7 +10619,7 @@ function onLocated(lat, lng, real, addrLabel) {
 
   const descEl = document.getElementById('nearby-loc-desc');
 
-  if (descEl) descEl.textContent = located ? `📍 ${addrLabel || '当前位置'}` : '开启位置权限后可查看真实距离';
+  if (descEl) descEl.textContent = located ? `📍 ${displayLocationRegion(locationState.effectiveRegion) || '当前位置'}` : '开启位置权限后可查看真实距离';
 
 
 
@@ -10507,6 +10636,14 @@ function onLocated(lat, lng, real, addrLabel) {
       localStorage.setItem('_locAt',  Date.now());
 
       if (addrLabel) localStorage.setItem('_locAddr', addrLabel);
+
+    } catch(e) {}
+
+  } else {
+
+    try {
+
+      ['_locLat','_locLng','_locAt','_locAddr'].forEach(key => localStorage.removeItem(key));
 
     } catch(e) {}
 
@@ -12208,10 +12345,7 @@ function applyAndClose() {
 
     // Homepage location filter
 
-    hasLocation = false;
-    userLat = null;
-    userLng = null;
-    selectedRegion = addrSelected.short || '全部地区';
+    setManualRegion(addrSelected.level < 0 ? null : regionStr);
 
     const chip = document.getElementById('region-chip');
 
@@ -12222,10 +12356,6 @@ function applyAndClose() {
       chip.classList.toggle('active', addrSelected.level >= 0);
 
     }
-
-    const nameEl = document.getElementById('loc-name-display');
-
-    if (nameEl) nameEl.textContent = addrSelected.level < 0 ? '全部地区' : addrSelected.short;
 
     const t = document.getElementById('section-title');
 
