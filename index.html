@@ -2240,6 +2240,8 @@ body:not(.account-v2-active) .home-v2-nav .bottom-nav-item.active .material-symb
 
   background:#FFFFFF;
 
+  pointer-events:none;
+
   display:flex;flex-direction:column;align-items:center;justify-content:center;
 
   transition:opacity .25s ease, visibility .25s ease;">
@@ -7954,14 +7956,16 @@ function _updateCategoryList(cats) {
   try {
 
     let renderedFirstPage = false;
+    const mappedMarkets = [];
 
     const list = await fetchAllMarketsFromApi({}, {
       perPage: 200,
-      onPage: (pageList, all, meta) => {
+      onPage: (pageList) => {
         if (!pageList.length) return;
-        MARKETS = all.map(_mapApiMarket);
-        // 首屏先渲染，后续每几页合并刷新一次，避免手机长时间白屏。
-        if (!renderedFirstPage || meta.page % 4 === 0 || all.length >= meta.total) {
+        mappedMarkets.push(...pageList.map(_mapApiMarket));
+        MARKETS = mappedMarkets;
+        // 首批数据到达即渲染；其余页只在内存追加，避免反复映射和刷新整页 DOM。
+        if (!renderedFirstPage) {
           renderedFirstPage = true;
           if (typeof renderMarkets === 'function') renderMarkets();
           if (!hasLocation) renderHomeNearbyForRegion();
@@ -7971,7 +7975,7 @@ function _updateCategoryList(cats) {
 
     if (list.length) {
 
-      MARKETS = list.map(_mapApiMarket);
+      MARKETS = mappedMarkets.length === list.length ? mappedMarkets : list.map(_mapApiMarket);
 
       if (typeof renderMarkets === 'function') renderMarkets();
 
@@ -18171,7 +18175,18 @@ async function pollSpiderStatus() {
 
 }
 
-setInterval(pollSpiderStatus, 10000);
+// 爬虫状态只在旧管理入口主动打开时刷新，C 端页面不再后台轮询和重绘隐藏表格。
+let spiderPollTimer = null;
+function startSpiderPolling() {
+  if (spiderPollTimer) return;
+  pollSpiderStatus();
+  spiderPollTimer = setInterval(pollSpiderStatus, 10000);
+}
+function stopSpiderPolling() {
+  if (!spiderPollTimer) return;
+  clearInterval(spiderPollTimer);
+  spiderPollTimer = null;
+}
 
 
 
@@ -18182,6 +18197,9 @@ const _origSwitchAdmin2 = switchAdmin;
 function switchAdmin(p, el) {
 
   _origSwitchAdmin2(p, el);
+
+  if (['spider', 'spider-data', 'spider-log'].includes(p)) startSpiderPolling();
+  else stopSpiderPolling();
 
   if (p === 'spider')      { renderSpiderTasks(); renderSpiderLogs(); }
 
