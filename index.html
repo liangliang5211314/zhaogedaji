@@ -8858,14 +8858,8 @@ function _setHomeLocationStatus(title, sub, located) {
 }
 
 function retryHomeLocate() {
-  const action = document.getElementById('home-location-action');
-  if (!hasLocation && action?.textContent.includes('选择')) {
-    openLocationModal();
-    return;
-  }
   hasLocation = false;
-  silentLocate();
-  _setHomeLocationStatus('正在刷新位置', '请稍候...', false);
+  doLocate();
 }
 
 function openHomeNearby(index) {
@@ -10428,18 +10422,6 @@ function doLocate() {
   if (text) text.textContent = '定位中...';
 
   if (btn)  btn.classList.add('loading');
-
-  switchUserPage('nearby');
-
-  const loading = document.getElementById('nearby-loading');
-
-  const results = document.getElementById('nearby-results');
-
-  if (loading) loading.classList.remove('hidden');
-
-  if (results) results.classList.add('hidden');
-
-
 
   const locateWithAmap = () => waitForAmap((fallback) => {
 
