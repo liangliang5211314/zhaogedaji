@@ -113,9 +113,23 @@ def test_nearby_orders_by_distance_and_returns_meters(client):
 
 def test_nearby_applies_radius_and_limit(client):
     response = client.get("/api/markets/nearby?lat=38.8730&lng=115.4646&radius=1&limit=1")
-    items = response.get_json()["data"]["list"]
+    data = response.get_json()["data"]
+    items = data["list"]
     assert len(items) == 1
     assert items[0]["id"] == "near"
+    assert data["total"] == 1
+    assert data["has_more"] is False
+
+
+def test_nearby_offset_out_of_range_returns_empty_list(client):
+    response = client.get(
+        "/api/markets/nearby?lat=38.8730&lng=115.4646&radius=100&limit=20&offset=999"
+    )
+    data = response.get_json()["data"]
+    assert response.status_code == 200
+    assert data["list"] == []
+    assert data["total"] == 2
+    assert data["has_more"] is False
 
 
 def test_nearby_rejects_invalid_coordinates_and_excludes_unpublished(client):

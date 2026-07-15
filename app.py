@@ -1789,12 +1789,13 @@ def nearby_markets():
         lng = float(request.args['lng'])
         radius_km = float(request.args.get('radius', 50))
         limit = int(request.args.get('limit', 50))
+        offset = int(request.args.get('offset', 0))
     except (KeyError, TypeError, ValueError):
-        return jsonify({'code': 400, 'msg': 'lat、lng、radius 或 limit 参数无效'}), 400
+        return jsonify({'code': 400, 'msg': 'lat、lng、radius、limit 或 offset 参数无效'}), 400
     if not (-90 <= lat <= 90 and -180 <= lng <= 180):
         return jsonify({'code': 400, 'msg': '坐标超出有效范围'}), 400
-    if radius_km <= 0 or limit <= 0:
-        return jsonify({'code': 400, 'msg': 'radius 和 limit 必须大于 0'}), 400
+    if radius_km <= 0 or limit <= 0 or offset < 0:
+        return jsonify({'code': 400, 'msg': 'radius、limit 必须大于 0，offset 不能小于 0'}), 400
     sort_mode = request.args.get('sort', 'distance')
     if sort_mode not in {'distance', 'recommended'}:
         return jsonify({'code': 400, 'msg': 'sort 只支持 distance 或 recommended'}), 400
@@ -1820,25 +1821,35 @@ def nearby_markets():
         item['distance'] = int(round(distance))
         item['tags'] = _parse_tags(item.get('tags'))
         items.append(item)
-    items.sort(key=lambda item: (item['distance'], -(item.get('rating') or 0)))
+    items.sort(key=lambda item: (
+        item['distance'],
+        -(item.get('rating') or 0),
+        str(item.get('id') or ''),
+    ))
     matched_total = len(items)
-    candidates = items[:max(200, limit * 4)]
     now = _nearby_now()
-    candidates = [_derive_market_schedule(item, now) for item in candidates]
-    distance_items = candidates[:limit]
-    recommended_items = sorted(candidates, key=lambda item: _recommendation_key(item, now))[:limit]
+    candidates = [_derive_market_schedule(item, now) for item in items]
+    distance_items = candidates[offset:offset + limit]
+    recommended_items = sorted(
+        candidates,
+        key=lambda item: (*_recommendation_key(item, now), str(item.get('id') or '')),
+    )[offset:offset + limit]
     selected = recommended_items if sort_mode == 'recommended' else distance_items
+    has_more = offset + len(selected) < matched_total
     return jsonify({
         'code': 200,
         'data': {
             'list': selected,
             'recommended': recommended_items,
-            'total': len(selected),
+            'total': matched_total,
+            'has_more': has_more,
+            'offset': offset,
             'matched_total': matched_total,
             'sort': sort_mode,
         },
         'markets': selected,
-        'total': len(selected),
+        'total': matched_total,
+        'has_more': has_more,
     })
 
 
