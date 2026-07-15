@@ -139,6 +139,42 @@ passed
 
 ---
 
+## 分区 07：推荐 / 附近双页与四 Tab（2026-07-15）
+
+- 设计源：Figma `3u4j48Ti8r2Er7gipvfAJT`，推荐页节点 `81:3`、附近列表节点 `81:4`、附近地图节点 `81:5`。
+- 设计修正：地图标记统一为“状态优先、无状态回退分类色”；旅行热门地区示例改为保定、唐山、沧州；推荐横幅统计范围明确为 `effectiveRegion`。
+- 预览入口：`?preview=recommend-morning`、`?preview=nearby-list`、`?preview=nearby-map`；原 `map-default` / `map-raised` 深链继续兼容。
+
+### 视觉对照与截图
+
+| 页面 | Figma 原稿 | 本地实现 | 同屏对照 | 生产截图 |
+| --- | --- | --- | --- | --- |
+| 推荐页 | `output/section-07-qa/figma-recommendation.png` | `output/section-07-qa/implementation-recommendation-375.jpg` | `output/section-07-qa/comparisons/recommendation-side-by-side.jpg` | `output/section-07-qa/production-recommendation-375.png` |
+| 附近列表 | `output/section-07-qa/figma-nearby-list.png` | `output/section-07-qa/implementation-nearby-list-375.jpg` | `output/section-07-qa/comparisons/nearby-list-side-by-side.jpg` | `output/section-07-qa/production-nearby-list-375.png` |
+| 附近地图 | `output/section-07-qa/figma-nearby-map.png` | `output/section-07-qa/implementation-nearby-map-375.jpg` | `output/section-07-qa/comparisons/nearby-map-side-by-side.jpg` | `output/section-07-qa/production-nearby-map-375.png` |
+
+### 页面职责与运行时检查
+
+- 底部导航升级为推荐 / 附近 / 收藏 / 我的四 Tab；推荐页不承载距离长列表，附近页统一承载距离排序、分类、只看今天、无限滚动、下拉刷新和列表 / 地图切换。
+- 推荐接口严格基于 `effectiveRegion`；未选择地区时不回退全国统计。近期庙会只取 `specific_dates` 且未来 60 天内的 2–3 场；时间轴按日期升序、不按距离排序。
+- 推荐页四区块均按数据存在性整体显示或隐藏；旅行热门地区按真实城市级供给聚合，生产前三为保定 1142、邢台 347、邯郸 325。
+- 附近列表和地图共用 `/api/markets/nearby`、分页状态与筛选状态；生产徐水区前三页各 20 条，共 60 个唯一 ID、0 重复，距离跨页保持非递减，总量 141。
+- 地图标记遵循卡片标签槽位同一优先级；生产高德底图、POI、状态标记和 141 条总数正常，运行日志只有 `[AMap] SDK ready`，无 error / warning。
+- 庙会时间轴深链可打开；收藏页与我的页回归可见，地区与定位、默认地图、大字模式、摊主入口均未受四 Tab 改造影响。
+
+### 自动化与生产发布
+
+- 推荐、附近分页、热门地区聚合共 16 项定向测试通过；全量 pytest `65 passed`，`app.py` 编译与 `index.html` 内联 JavaScript 语法检查通过。
+- 发布提交：`6288747` 四标签框架、`86a4a4a` 附近双视图、`f496747` 场景化推荐页。
+- 生产发布前数据库备份：`/www/wwwroot/zhaogedaji/data/backups/deploy_20260715_204856/zhaojishi.db`；部署后数据库 `integrity_check=ok`，集市 3030 条，公开健康检查通过。
+- 发布时旧 Gunicorn 进程未在 systemd 停止阶段退出，清理旧进程后服务正常启动；最终 `zhaojishi=active`，生产提交为 `f496747`。
+
+### final result
+
+passed
+
+---
+
 ## 徐水区首页 Region / GPS 统一链路生产验收（2026-07-15）
 
 - 生产版本：`2ae1bd4`，验收地址 `https://app.xingjiawu.cn/`。
