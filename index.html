@@ -4410,7 +4410,7 @@ let selectedRegion = '全部地区';
 
 const LOCATION_STATE_KEY = 'zjsLocationState';
 const RECENT_REGIONS_KEY = 'zjsRecentRegions';
-const LOCATION_CACHE_VERSION = '2';
+const LOCATION_CACHE_VERSION = '3'; // v3 起缓存统一存高德 GCJ-02 坐标
 const LOCATION_CACHE_TTL_MS = 30 * 60 * 1000;
 
 function normalizeLocationRegion(value) {
@@ -10296,10 +10296,49 @@ function waitForAmap(callback, maxWait = 8000) {
 
 // ── 主定位入口 ──────────────────────────────────────────────
 
+function convertBrowserPositionToGcj02(position, onSuccess, onFailure) {
+  const wgsLat = Number(position?.coords?.latitude);
+  const wgsLng = Number(position?.coords?.longitude);
+  if (!isValidPosition(wgsLat,wgsLng)) {
+    onFailure(new Error('浏览器返回了无效坐标'));
+    return;
+  }
+
+  const convert = () => {
+    AMap.convertFrom([wgsLng,wgsLat],'gps',(status,result) => {
+      const converted = result?.locations?.[0];
+      const lat = Number(typeof converted?.getLat === 'function' ? converted.getLat() : converted?.lat);
+      const lng = Number(typeof converted?.getLng === 'function' ? converted.getLng() : converted?.lng);
+      if (status === 'complete' && isValidPosition(lat,lng)) {
+        onSuccess(lat,lng);
+        return;
+      }
+      onFailure(new Error('WGS-84 转 GCJ-02 失败'));
+    });
+  };
+
+  if (window.AMap?.convertFrom) {
+    convert();
+    return;
+  }
+  waitForAmap(failed => {
+    if (failed || !window.AMap?.convertFrom) {
+      onFailure(new Error('高德坐标转换服务未就绪'));
+      return;
+    }
+    convert();
+  });
+}
+
 function onBrowserGeolocation(position, fallbackLabel='浏览器定位') {
-  const lat = position.coords.latitude;
-  const lng = position.coords.longitude;
-  resolveLocatedPosition(lat,lng,fallbackLabel);
+  convertBrowserPositionToGcj02(
+    position,
+    (lat,lng) => resolveLocatedPosition(lat,lng,fallbackLabel),
+    error => {
+      console.warn('[Browser Geo] 坐标转换失败:',error);
+      onLocated(null,null,false,'定位坐标转换失败');
+    }
+  );
 }
 
 function resolveLocatedPosition(lat, lng, fallbackLabel='当前位置', fallbackComponent=null) {
@@ -14394,13 +14433,25 @@ function fillAddr() {
 
       pos => {
 
-        userLat = pos.coords.latitude;
+        convertBrowserPositionToGcj02(
 
-        userLng = pos.coords.longitude;
+          pos,
 
-        hasLocation = true;
+          (lat,lng) => {
 
-        doFill();
+            userLat = lat;
+
+            userLng = lng;
+
+            hasLocation = true;
+
+            doFill();
+
+          },
+
+          () => { showToast('定位坐标转换失败，请重试'); if (addrBtn) { addrBtn.textContent = origText; addrBtn.disabled = false; } }
+
+        );
 
       },
 
