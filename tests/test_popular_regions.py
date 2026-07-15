@@ -56,3 +56,18 @@ def test_popular_regions_aggregate_published_markets_and_tags(client):
 def test_popular_regions_limit_is_validated(client):
     response = client.get("/api/regions/popular?limit=not-a-number")
     assert response.status_code == 400
+
+
+def test_popular_regions_can_aggregate_at_city_level(client):
+    response = client.get("/api/regions/popular?limit=2&scope=city")
+    assert response.status_code == 200
+    items = response.get_json()["data"]
+    assert items[0]["region"] == "山东省·潍坊市"
+    assert items[0]["market_count"] == 3
+    assert items[1]["region"] == "四川省·成都市"
+    assert items[1]["market_count"] == 1
+
+
+def test_popular_regions_rejects_unknown_scope(client):
+    response = client.get("/api/regions/popular?scope=province")
+    assert response.status_code == 400

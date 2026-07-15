@@ -1050,6 +1050,9 @@ def get_popular_regions():
         limit = max(1, min(int(request.args.get('limit', 4)), 20))
     except (TypeError, ValueError):
         return err('limit 必须是整数', 400)
+    scope = (request.args.get('scope') or 'district').strip().lower()
+    if scope not in {'district', 'city'}:
+        return err('scope 只支持 district 或 city', 400)
     conn = get_db()
     rows = conn.execute("""
         SELECT region, category, tags
@@ -1064,7 +1067,10 @@ def get_popular_regions():
         parts = [part.strip() for part in row['region'].split('·') if part.strip()]
         if not parts:
             continue
-        group_parts = parts[:3] if len(parts) >= 3 else parts
+        if scope == 'city' and len(parts) >= 2:
+            group_parts = parts[:2]
+        else:
+            group_parts = parts[:3] if len(parts) >= 3 else parts
         key = '·'.join(group_parts)
         group = groups.setdefault(key, {
             'region': key,
@@ -1909,6 +1915,99 @@ def nearby_markets():
         'markets': selected,
         'total': matched_total,
         'has_more': has_more,
+    })
+
+
+@app.route('/api/markets/recommendations', methods=['GET'])
+def market_recommendations():
+    """Return the four editorial blocks used by the recommendation tab.
+
+    The scope is always the caller's effective region.  This endpoint never
+    falls back to national counts, and it deliberately does not return a long
+    distance-sorted list; that responsibility belongs to ``/nearby``.
+    """
+    region_filter = (request.args.get('region') or '').strip()
+    if not region_filter:
+        return ok({
+            'scope_region': None,
+            'time_mode': 'morning' if _nearby_now().hour < 12 else 'afternoon',
+            'today_total': 0,
+            'tonight_total': 0,
+            'tomorrow_total': 0,
+            'temple_fairs': [],
+            'temple_timeline': [],
+            'featured_markets': [],
+        })
+
+    conn = get_db()
+    rows = conn.execute(
+        """SELECT * FROM markets
+           WHERE status='published' AND (region LIKE ? OR address LIKE ?)""",
+        (f'%{region_filter}%', f'%{region_filter}%'),
+    ).fetchall()
+    conn.close()
+
+    now = _nearby_now()
+    today = now.date()
+    candidates = []
+    for row in rows:
+        item = dict(row)
+        item['tags'] = _parse_tags(item.get('tags'))
+        candidates.append(_derive_market_schedule(item, now))
+
+    valid = [
+        item for item in candidates
+        if item.get('schedule_status') != 'needs_review'
+        and item.get('openTime', {}).get('migration_status') != 'needs_review'
+    ]
+    today_total = sum(item.get('schedule_status') in {'today', 'daily'} for item in valid)
+    tonight_total = sum(
+        item.get('schedule_status') in {'today', 'daily'} and _market_kind(item)['night']
+        for item in valid
+    )
+    tomorrow_total = sum(item.get('schedule_status') == 'tomorrow' for item in valid)
+
+    temple_fairs = []
+    for item in valid:
+        open_time = item.get('openTime') or {}
+        is_temple = item.get('category') == '庙会' or '庙会' in (item.get('name') or '')
+        next_open = item.get('next_open_date')
+        if not is_temple or open_time.get('type') != 'specific_dates' or not next_open:
+            continue
+        try:
+            days_until = (datetime.fromisoformat(next_open).date() - today).days
+        except (TypeError, ValueError):
+            continue
+        if 0 <= days_until <= 60:
+            item['days_until'] = days_until
+            temple_fairs.append(item)
+    temple_fairs.sort(key=lambda item: (
+        item.get('next_open_date') or '9999-12-31',
+        -(item.get('rating') or 0),
+        str(item.get('id') or ''),
+    ))
+
+    feature_tags = {'当地特色', '特色认证', '土货特产'}
+    featured_markets = [
+        item for item in valid
+        if feature_tags.intersection(set(item.get('tags') or []))
+    ]
+    featured_markets.sort(key=lambda item: (
+        0 if item.get('schedule_status') in {'today', 'daily', 'tomorrow'} else 1,
+        -(item.get('rating') or 0),
+        -(item.get('review_count') or 0),
+        str(item.get('id') or ''),
+    ))
+
+    return ok({
+        'scope_region': region_filter,
+        'time_mode': 'morning' if now.hour < 12 else 'afternoon',
+        'today_total': today_total,
+        'tonight_total': tonight_total,
+        'tomorrow_total': tomorrow_total,
+        'temple_fairs': temple_fairs[:3],
+        'temple_timeline': temple_fairs,
+        'featured_markets': featured_markets[:4],
     })
 
 
