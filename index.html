@@ -10412,35 +10412,17 @@ function doLocate() {
 
 
 
-  waitForAmap((fallback) => {
+  const locateWithAmap = () => waitForAmap((fallback) => {
 
     if (fallback || !window.AMap) {
 
-      // 降级：用浏览器原生定位
-
-      if (navigator.geolocation) {
-
-        navigator.geolocation.getCurrentPosition(
-
-          pos => onBrowserGeolocation(pos),
-
-          ()  => onLocated(null, null, false, '定位失败'),
-
-          { timeout: 7000 }
-
-        );
-
-      } else {
-
-        onLocated(null, null, false, '模拟定位');
-
-      }
+      onLocated(null, null, false, '定位失败');
 
       return;
 
     }
 
-    // 使用高德 Geolocation（比浏览器更精准，支持室内定位）
+    // 系统定位失败后使用高德 Geolocation 兜底，并允许 IP 定位。
 
     AMap.plugin('AMap.Geolocation', () => {
 
@@ -10474,25 +10456,7 @@ function doLocate() {
 
           console.warn('[AMap Geo] 定位失败:', result);
 
-          // 降级浏览器定位
-
-          if (navigator.geolocation) {
-
-            navigator.geolocation.getCurrentPosition(
-
-              pos => onBrowserGeolocation(pos),
-
-              ()  => onLocated(null, null, false, '定位失败'),
-
-              { timeout: 5000 }
-
-            );
-
-          } else {
-
-            onLocated(null, null, false, '定位失败');
-
-          }
+          onLocated(null, null, false, '定位失败');
 
         }
 
@@ -10501,6 +10465,25 @@ function doLocate() {
     });
 
   });
+
+  // 显式点击时立即请求系统定位，保留浏览器要求的用户手势，确保首次授权弹层能出现。
+  if (navigator.geolocation) {
+
+    navigator.geolocation.getCurrentPosition(
+
+      pos => onBrowserGeolocation(pos),
+
+      () => locateWithAmap(),
+
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+
+    );
+
+  } else {
+
+    locateWithAmap();
+
+  }
 
 }
 
